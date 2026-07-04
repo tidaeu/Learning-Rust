@@ -1,0 +1,2720 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Rust in 2 Months</title>
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+            :root {
+                --bg: #16181d;
+                --bg-2: #1c1f26;
+                --bg-3: #232732;
+                --bg-raised: #262b36;
+                --line: #2e3340;
+                --line-2: #3a4150;
+                --ink: #ece8e1;
+                --ink-dim: #aab0bb;
+                --ink-faint: #727a86;
+                --rust: #d2622e;
+                --rust-bright: #f0813f;
+                --rust-deep: #9e3b17;
+                --patina: #4fb0a0;
+                --patina-deep: #2e7d72;
+                --copper: #c98a4b;
+                --glow: rgba(210,98,46,.16);
+                --glow-2: rgba(79,176,160,.14);
+
+                --mono-display: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+                --sans: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+                --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+                --maxw: 1080px;
+                --radius: 4px;
+
+                /* Phase colour aliases — keep _2's JS working */
+                --yellow: #f0813f;
+                --blue: #4fb0a0;
+                --orange: #d2622e;
+                --green: #4fb0a0;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+            body {
+                background:
+                    radial-gradient(900px 500px at 88% -8%, var(--glow), transparent 60%),
+                    radial-gradient(700px 500px at -5% 12%, var(--glow-2), transparent 55%),
+                    var(--bg);
+                color: var(--ink);
+                font-family: var(--sans);
+                font-size: 16px;
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+                min-height: 100vh;
+                padding-bottom: 80px;
+            }
+
+            a { color: var(--patina); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s, color .15s; }
+            a:hover { color: #6fd0c0; border-bottom-color: var(--patina-deep); }
+            a:focus-visible, button:focus-visible { outline: 2px solid var(--rust-bright); outline-offset: 2px; border-radius: 2px; }
+
+            /* ── HEADER ── */
+            .header {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: rgba(20,22,27,.9);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--line);
+                padding: 12px 24px 10px;
+            }
+            .header-inner {
+                max-width: var(--maxw);
+                margin: 0 auto;
+            }
+            .header-top {
+                display: flex;
+                align-items: center;
+                gap: 18px;
+                flex-wrap: wrap;
+            }
+            .header-brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-family: var(--mono-display);
+                font-weight: 700;
+                font-size: .95rem;
+                letter-spacing: -.01em;
+                color: var(--ink);
+            }
+            .header-brand .gear {
+                width: 20px; height: 20px;
+                color: var(--rust);
+                flex: none;
+                animation: spin 18s linear infinite;
+            }
+            @media (prefers-reduced-motion: reduce) { .header-brand .gear { animation: none; } }
+            .header-label {
+                font-family: var(--mono);
+                font-size: .7rem;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                color: var(--ink-faint);
+                margin-bottom: 2px;
+            }
+            .header-title {
+                font-family: var(--mono-display);
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--ink);
+            }
+            .header-sub {
+                font-size: .75rem;
+                color: var(--ink-faint);
+                margin-top: 1px;
+                font-family: var(--mono);
+            }
+            .header-progress-wrap {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-left: auto;
+                flex-wrap: wrap;
+            }
+            .header-buildbar {
+                font-family: var(--mono);
+                font-size: .78rem;
+                color: var(--ink-dim);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                white-space: nowrap;
+            }
+            .header-buildbar .label { color: var(--ink-faint); }
+            .header-track {
+                width: 140px; height: 8px;
+                border: 1px solid var(--line-2);
+                border-radius: 20px;
+                background: var(--bg-3);
+                overflow: hidden;
+            }
+            .header-pct-label { color: var(--ink-faint); }
+            .header-pct {
+                font-variant-numeric: tabular-nums;
+                color: var(--rust-bright);
+                min-width: 34px;
+                text-align: right;
+            }
+
+            .progress-bar-wrap {
+                width: 140px; height: 8px;
+                border: 1px solid var(--line-2);
+                border-radius: 20px;
+                background: var(--bg-3);
+                overflow: hidden;
+            }
+            .progress-bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, var(--rust-deep), var(--rust), var(--rust-bright));
+                transition: width 0.5s cubic-bezier(.2,.7,.2,1);
+            }
+
+            /* schedule badge */
+            .schedule-strip {
+                margin-top: 8px;
+                padding: 6px 10px;
+                background: var(--bg-2);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                font-family: var(--mono);
+                font-size: .72rem;
+                color: var(--ink-faint);
+                display: flex;
+                gap: 14px;
+                flex-wrap: wrap;
+            }
+            .schedule-strip span { color: var(--rust-bright); }
+
+            /* phase tabs */
+            .phase-tabs {
+                display: flex;
+                gap: 5px;
+                margin-top: 8px;
+                flex-wrap: wrap;
+            }
+            .phase-tab {
+                padding: 4px 11px;
+                border-radius: var(--radius);
+                border: 1px solid var(--line-2);
+                background: var(--bg-3);
+                color: var(--ink-faint);
+                font-size: .72rem;
+                font-weight: 700;
+                cursor: pointer;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                font-family: var(--mono);
+                transition: all 0.15s;
+            }
+            .phase-tab:hover {
+                border-color: var(--rust-deep);
+                color: var(--ink-dim);
+                background: var(--bg-raised);
+            }
+            .phase-tab.active {
+                border-color: var(--rust);
+                background: rgba(210,98,46,.12);
+                color: var(--rust-bright);
+            }
+            /* override active color per phase using inline --phase-color */
+            .phase-tab.active[style*="--phase-color"] {
+                border-color: var(--phase-color);
+                background: color-mix(in srgb, var(--phase-color) 12%, transparent);
+                color: var(--phase-color);
+            }
+
+            /* ── MAIN ── */
+            .main {
+                max-width: var(--maxw);
+                margin: 0 auto;
+                padding: 28px 24px 0;
+            }
+
+            /* timeline hint / info banner */
+            .timeline-banner {
+                padding: 16px 20px;
+                margin-bottom: 20px;
+                border: 1px solid var(--line);
+                border-left: 3px solid var(--patina);
+                border-radius: 6px;
+                background: var(--bg-2);
+                font-size: .94rem;
+                color: var(--ink-dim);
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                line-height: 1.6;
+            }
+            .timeline-banner strong { color: var(--ink); font-weight: 600; }
+
+            /* phase header */
+            .phase-header {
+                padding: 14px 20px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+                border: 1px solid var(--line);
+                background: var(--bg-2);
+            }
+            .phase-header-title {
+                font-family: var(--mono-display);
+                font-size: 1.15rem;
+                font-weight: 700;
+                color: var(--rust-bright);
+                letter-spacing: -.01em;
+            }
+            .phase-header-sub {
+                font-size: .8rem;
+                color: var(--ink-faint);
+                margin-top: 4px;
+                font-family: var(--mono);
+            }
+
+            /* ── WEEK CARD ── */
+            .week-card {
+                margin-bottom: 6px;
+                border: 1px solid var(--line);
+                background: var(--bg-2);
+                border-radius: 8px;
+                overflow: hidden;
+                transition: border-color .2s, box-shadow .2s;
+            }
+            .week-card:hover {
+                border-color: var(--line-2);
+                box-shadow: 0 6px 24px rgba(0,0,0,.22);
+            }
+            .week-card.open {
+                border-color: color-mix(in srgb, var(--phase-color) 35%, var(--line));
+            }
+
+            .week-header {
+                width: 100%;
+                padding: 16px 20px 8px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                text-align: left;
+                display: flex;
+                align-items: flex-start;
+                gap: 14px;
+                font-family: inherit;
+                transition: background 0.15s;
+            }
+            .week-card.open .week-header {
+                background: color-mix(in srgb, var(--phase-color) 5%, transparent);
+            }
+            .week-header:hover {
+                background: rgba(255,255,255,.018);
+            }
+
+            .week-badge {
+                font-size: .68rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                padding: 3px 8px;
+                border-radius: 20px;
+                min-width: 44px;
+                text-align: center;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                flex-shrink: 0;
+                margin-top: 3px;
+                color: var(--phase-color, var(--rust-bright));
+                background: color-mix(in srgb, var(--phase-color, var(--rust)) 14%, transparent);
+                border: 1px solid color-mix(in srgb, var(--phase-color, var(--rust)) 30%, transparent);
+            }
+            .week-meta {
+                flex: 1;
+                min-width: 0;
+            }
+            .week-title {
+                font-family: var(--mono-display);
+                font-size: 1.05rem;
+                font-weight: 700;
+                color: var(--ink);
+                letter-spacing: -.01em;
+                line-height: 1.2;
+            }
+            .week-focus {
+                font-size: .75rem;
+                color: var(--ink-faint);
+                margin-top: 4px;
+                font-family: var(--mono);
+            }
+
+            .week-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+                margin-top: 2px;
+            }
+            .completion-badge {
+                font-size: .68rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                padding: 3px 10px;
+                border-radius: 20px;
+                letter-spacing: .06em;
+                text-transform: uppercase;
+                border: 1px solid var(--line-2);
+                color: var(--ink-faint);
+                background: var(--bg-3);
+                white-space: nowrap;
+            }
+            .chevron {
+                color: var(--ink-faint);
+                font-size: 18px;
+                transition: transform 0.2s;
+                flex-shrink: 0;
+            }
+            .week-card.open .chevron {
+                transform: rotate(180deg);
+            }
+
+            /* ── WEEK BODY ── */
+            .week-body {
+                display: none;
+                padding: 0 20px 20px;
+                border-top: 1px solid var(--line);
+            }
+            .week-card.open .week-body {
+                display: block;
+            }
+
+            .daily-strip {
+                margin-top: 14px;
+                margin-bottom: 10px;
+                padding: 8px 12px;
+                background: var(--bg-3);
+                border-radius: var(--radius);
+                font-size: .85rem;
+                color: var(--ink-dim);
+                font-family: var(--mono);
+                border-left: 3px solid var(--rust);
+                line-height: 1.55;
+            }
+            .daily-label {
+                color: var(--rust-bright);
+                font-weight: 700;
+            }
+
+            .schedule-info {
+                margin-bottom: 10px;
+                padding: 7px 12px;
+                background: var(--bg-3);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                font-size: .8rem;
+                color: var(--ink-faint);
+                font-family: var(--mono);
+                line-height: 1.55;
+            }
+            .schedule-info span { color: var(--patina); }
+
+            .tasks-label {
+                font-size: .68rem;
+                color: var(--rust);
+                letter-spacing: .14em;
+                text-transform: uppercase;
+                font-weight: 700;
+                font-family: var(--mono);
+                margin: 12px 0 4px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .tasks-label::after {
+                content: "";
+                height: 1px;
+                flex: 1;
+                background: var(--line);
+            }
+            .tasks-label.leet { color: var(--patina); }
+            .tasks-label.github { color: var(--rust-bright); }
+            .tasks-label.mock { color: var(--copper); }
+            .tasks-label.apply { color: var(--patina); }
+
+            .task-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 6px 7px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background .12s;
+                line-height: 1.5;
+            }
+            .task-row:hover { background: var(--bg-3); }
+            .task-row.learn {
+                border-left: 3px solid var(--patina);
+                padding-left: 8px;
+            }
+            .task-row.warm {
+                border-left: 3px solid var(--copper);
+                padding-left: 8px;
+            }
+            .task-row.apply {
+                border-left: 3px solid var(--rust);
+                padding-left: 8px;
+            }
+            .task-row.saturday {
+                border-left: 3px solid var(--rust-deep);
+                padding-left: 8px;
+            }
+
+            .task-checkbox {
+                width: 17px;
+                height: 17px;
+                min-width: 17px;
+                border-radius: 4px;
+                border: 1.5px solid var(--line-2);
+                background: var(--bg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-top: 3px;
+                transition: all 0.15s;
+                flex-shrink: 0;
+                position: relative;
+                cursor: pointer;
+            }
+            .task-row:hover .task-checkbox {
+                border-color: var(--rust);
+            }
+            /* State 1 — in progress */
+            .task-checkbox.in-progress {
+                background: rgba(210,98,46,.18);
+                border-color: var(--rust);
+            }
+            .task-checkbox.in-progress::after {
+                content: "";
+                display: block;
+                width: 8px;
+                height: 2px;
+                background: var(--rust-bright);
+                border-radius: 2px;
+            }
+            /* State 2 — done */
+            .task-checkbox.done-check {
+                background: var(--rust);
+                border-color: var(--rust);
+            }
+            .task-checkbox.done-check::after {
+                content: "";
+                position: absolute;
+                left: 4px; top: 1.5px;
+                width: 5px; height: 9px;
+                border: solid var(--bg);
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+            /* State 3 — shaky */
+            .task-checkbox.shaky {
+                background: rgba(201,138,75,.18);
+                border-color: var(--copper);
+            }
+            .task-checkbox.shaky::after {
+                content: "?";
+                font-size: 11px;
+                font-weight: 900;
+                color: var(--copper);
+                font-family: var(--mono);
+                line-height: 1;
+            }
+            .task-text {
+                font-size: .92rem;
+                color: var(--ink);
+                line-height: 1.5;
+            }
+            .task-row.in-progress-row .task-text {
+                color: var(--rust-bright);
+            }
+            .task-row.done .task-text {
+                color: var(--ink-faint);
+                text-decoration: line-through;
+                text-decoration-color: var(--rust-deep);
+            }
+            .task-row.shaky-row {
+                border-left: 3px solid var(--copper) !important;
+                padding-left: 8px;
+            }
+            .task-row.shaky-row .task-text {
+                color: var(--copper);
+            }
+
+            .resources-wrap {
+                margin-top: 16px;
+            }
+            .resources-label {
+                font-size: .68rem;
+                color: var(--ink-faint);
+                letter-spacing: .14em;
+                text-transform: uppercase;
+                font-weight: 700;
+                font-family: var(--mono);
+                margin-bottom: 7px;
+            }
+            .resources-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .resource-chip {
+                font-size: .78rem;
+                padding: 4px 12px;
+                background: var(--bg-3);
+                border: 1px solid var(--line-2);
+                border-radius: 20px;
+                color: var(--ink-dim);
+                font-family: var(--mono);
+                transition: .15s;
+            }
+            .resource-chip:hover {
+                color: var(--patina);
+                border-color: var(--patina-deep);
+                background: var(--bg-raised);
+            }
+
+            /* hidden phases */
+            .phase-section { display: none; }
+            .phase-section.active { display: block; }
+
+            /* ── SHAKY PANEL ── */
+            .shaky-week-group {
+                margin-bottom: 10px;
+                border: 1px solid rgba(201,138,75,.25);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .shaky-week-label {
+                padding: 9px 16px;
+                background: rgba(201,138,75,.07);
+                font-family: var(--mono);
+                font-size: .72rem;
+                font-weight: 700;
+                letter-spacing: .12em;
+                text-transform: uppercase;
+                color: var(--copper);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .shaky-week-label .shaky-count {
+                font-size: .68rem;
+                padding: 1px 8px;
+                border-radius: 10px;
+                background: rgba(201,138,75,.12);
+                border: 1px solid rgba(201,138,75,.28);
+                color: var(--copper);
+                letter-spacing: .04em;
+            }
+            .shaky-task-entry {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 9px 16px;
+                border-top: 1px solid var(--line);
+                cursor: pointer;
+                transition: background 0.12s;
+            }
+            .shaky-task-entry:hover { background: rgba(201,138,75,.05); }
+            .shaky-task-entry .shaky-dot {
+                width: 7px; height: 7px;
+                min-width: 7px;
+                border-radius: 50%;
+                background: var(--copper);
+                flex-shrink: 0;
+            }
+            .shaky-task-entry .shaky-task-text {
+                font-size: .88rem;
+                color: var(--ink-dim);
+                line-height: 1.4;
+                flex: 1;
+            }
+            .shaky-task-entry .shaky-goto {
+                font-size: .68rem;
+                font-family: var(--mono);
+                color: var(--ink-faint);
+                flex-shrink: 0;
+                transition: color 0.15s;
+                letter-spacing: .06em;
+            }
+            .shaky-task-entry:hover .shaky-goto { color: var(--copper); }
+            .shaky-summary-bar {
+                display: flex;
+                gap: 20px;
+                padding: 12px 16px;
+                margin-bottom: 16px;
+                background: var(--bg-2);
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-family: var(--mono);
+                font-size: .78rem;
+                color: var(--ink-faint);
+                flex-wrap: wrap;
+            }
+            .shaky-summary-bar .s-stat {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .shaky-summary-bar .s-val {
+                font-size: 1.4rem;
+                font-weight: 700;
+                color: var(--copper);
+                line-height: 1;
+                font-family: var(--mono-display);
+            }
+            .shaky-summary-bar .s-lbl {
+                font-size: .68rem;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                color: var(--ink-faint);
+            }
+
+            @keyframes spin { to { transform: rotate(360deg); } }
+
+            /* ── RESPONSIVE ── */
+            @media (max-width: 600px) {
+                .header-title { font-size: .85rem; }
+                .week-title { font-size: .92rem; }
+                .schedule-strip { flex-direction: column; gap: 3px; }
+                .header-progress-wrap { width: 100%; }
+                .header-track { width: 100px; }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-inner">
+                <div class="header-top">
+                    <div>
+                        <div class="header-label">RUST PROFICIENCY SPRINT · 8 WEEKS TO FLUENT</div>
+                        <div class="header-title">Rust in 2 Months</div>
+                        <div class="header-sub">WASM · Networking · Backend · Dev Tooling</div>
+                    </div>
+                    <div class="header-progress-wrap">
+                        <div class="header-buildbar">
+                            <span class="label">Progress</span>
+                            <div class="progress-bar-wrap">
+                                <div class="progress-bar-fill" id="totalBar" style="width:0%"></div>
+                            </div>
+                            <span class="header-pct" id="totalPct">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="schedule-strip">
+                    <div>Mon–Fri <span>2–3 hrs/day</span></div>
+                    <div>Saturday <span>3–4 hrs (project)</span></div>
+                    <div>Sunday <span>Rest (Sabbath)</span></div>
+                    <div>Weekly total <span>~13–19 hrs</span></div>
+                </div>
+
+                <div class="phase-tabs">
+                    <button
+                        class="phase-tab active"
+                        style="--phase-color: #f0813f"
+                        onclick="showPhase(0, this)"
+                    >
+                        P1 · Core Rust
+                    </button>
+                    <button
+                        class="phase-tab"
+                        style="--phase-color: #4fb0a0"
+                        onclick="showPhase(1, this)"
+                    >
+                        P2 · Async & Networking
+                    </button>
+                    <button
+                        class="phase-tab"
+                        style="--phase-color: #d2622e"
+                        onclick="showPhase(2, this)"
+                    >
+                        P3 · WASM & Tooling
+                    </button>
+                    <button
+                        class="phase-tab"
+                        id="shaky-tab-btn"
+                        style="--phase-color: #c98a4b"
+                        onclick="showPhase('shaky', this)"
+                    >
+                        ⚠ Shaky Concepts
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+            <div class="timeline-banner">
+                ⚡
+                <div>
+                    You're already a working engineer with strong fundamentals —
+                    you've built data structures from scratch, worked through
+                    <strong>DDIA</strong>, and ship real software. This plan
+                    skips the basics and attacks Rust's one genuinely new idea
+                    first: <strong>ownership &amp; the borrow checker</strong>
+                    (Week 1). By Week 4 you're writing async network services; by
+                    Week 8 you're shipping <strong>WebAssembly</strong> and a
+                    developer tool. Every week ends with a portfolio project —
+                    build as you learn.
+                </div>
+            </div>
+
+            <div class="schedule-info" style="margin-bottom: 20px">
+                <span>HOW TO USE: </span>Click any task to cycle its state — ○
+                not started → ◐ in progress → ✓ done → ? shaky (done but not
+                confident). Shaky items collect in the ⚠ tab to revisit. Task
+                colors: <span>📗 LEARN</span> (read/study) ·
+                <span>🔥 DRILL</span> (exercises) · <span>🔒 BUILD</span> (write
+                code) · <span>Saturday</span> (project block).
+            </div>
+
+            <!-- ═══════════ PHASE 1 ═══════════ -->
+            <div
+                class="phase-section active"
+                id="phase-0"
+                style="--phase-color: #f0813f"
+            >
+                <div
+                    class="phase-header"
+                    style="border-left: 3px solid #f0813f"
+                >
+                    <div class="phase-header-title" style="color: #f0813f">
+                        Phase 1: Core Rust
+                    </div>
+                    <div class="phase-header-sub">
+                        Week 0 (soft start) + Weeks 1–3 · The language + the
+                        borrow checker · reach reading fluency
+                    </div>
+                </div>
+
+                <!-- W0 -->
+                <div class="week-card" id="wc-0">
+                    <button class="week-header" onclick="toggleWeek(0)">
+                        <div
+                            class="week-badge"
+                            style="
+                                color: #4fb0a0;
+                                background: rgba(79, 176, 160, 0.12);
+                                border-color: rgba(79, 176, 160, 0.28);
+                            "
+                        >
+                            WK 0
+                        </div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Soft Start — Setup + First Taste
+                            </div>
+                            <div class="week-focus">
+                                Toolchain · first Rust · Rustlings warm-up · ~4–6
+                                hrs total · no pressure
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-0">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">GOAL: </span>Get the
+                            toolchain working, run your first Rust program, and
+                            feel the compile → error → fix loop. No timer.
+                        </div>
+                        <div class="schedule-info">
+                            You already program well —
+                            <span
+                                >Rust's syntax will feel familiar; only ownership
+                                is new.</span
+                            >
+                            Use Week 0 to set up and build the habit, not to
+                            learn hard material.
+                        </div>
+                        <div class="tasks-label">SETUP (1 HR)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Install the toolchain via rustup (rustup.rs) —
+                                gives rustc, cargo, and std. Verify with `rustc
+                                --version` (you want 1.85+ for the 2024 edition).
+                                Run `rustup component add clippy`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Wire up Zed for Rust: rust-analyzer ships built
+                                in. Turn ON inlay type hints and format-on-save —
+                                seeing inferred types everywhere is a huge aid
+                                while ownership is still new. Your vim keymap
+                                carries over untouched.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Create a PUBLIC GitHub repo "rust-sprint" — this
+                                is your portfolio repo, not a scratch pad. Clean
+                                README: "Learning Rust in 2 months —
+                                data-structures, async networking, WASM, and a
+                                dev tool."
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                `cargo new hello-rust && cd hello-rust && cargo
+                                run`. Open Cargo.toml — note `edition = "2024"`.
+                                This is your project manifest (like
+                                package.json/pyproject).
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Bookmark the four pillars you'll live in: the
+                                Book (Brown interactive edition,
+                                rust-book.cs.brown.edu), Rustlings, Rust by
+                                Example, and the std docs (doc.rust-lang.org/std).
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — FIRST TASTE (1–2 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 1–3 (setup, guessing game,
+                                common concepts). The guessing game is a fast
+                                tour of match, Result, crates, and shadowing.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: `cargo install rustlings`, then
+                                `rustlings init`. Do the intro + variables
+                                sections. Run `rustlings` and let it guide you
+                                exercise by exercise.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — OWNERSHIP, FIRST CONTACT (1–2 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 4 (Ownership) — slowly. Move
+                                semantics, borrowing, slices. This is THE chapter
+                                and the only thing here that's genuinely new
+                                coming from Python. Don't rush it.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: First public commit — a tiny CLI that
+                                reverses its argument and counts characters,
+                                using `std::env::args()`. Push to rust-sprint.
+                                The point is to feel rustc's error messages
+                                (they're famously good).
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip">rustup.rs</span
+                                ><span class="resource-chip"
+                                    >rust-book.cs.brown.edu</span
+                                ><span class="resource-chip">rustlings</span
+                                ><span class="resource-chip"
+                                    >doc.rust-lang.org/std</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- W1 -->
+                <div class="week-card" id="wc-1">
+                    <button class="week-header" onclick="toggleWeek(1)">
+                        <div class="week-badge">WK 1</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Ownership, Borrowing & Lifetimes
+                            </div>
+                            <div class="week-focus">
+                                The borrow checker · the core mental model · ~13
+                                hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-1">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">THE MAKE-OR-BREAK WEEK: </span
+                            >Everything else depends on this, so it's
+                            front-loaded. Expect to fight the compiler — that's
+                            the learning.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — OWNERSHIP DEEP (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Re-read Book Ch. 4 and take the Brown
+                                edition quizzes — they're built to catch the
+                                exact misconceptions beginners have. Make move vs
+                                copy vs clone crystal clear.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `move_semantics` (all
+                                exercises).
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Start a "Rust" Anki deck. First cards:
+                                when does a value move vs copy? what is a borrow?
+                                why can't a &mut coexist with a shared &?
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — REFERENCES & SLICES (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 4.2–4.3 (references, slices).
+                                Internalize the aliasing rule: one &mut XOR many
+                                &. This single rule is why Rust prevents data
+                                races.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `primitive_types`, `vecs`,
+                                `strings` — these force the &str vs String
+                                distinction, the #1 early friction point.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Write helpers that take `&str` (not
+                                String) and `&[T]` (not Vec&lt;T&gt;) — practice
+                                borrowing in APIs instead of taking ownership.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — STRUCTS, ENUMS & MATCH (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 5–6 (structs, methods, enums,
+                                match, Option). Coming from Python, `Option&lt;T&gt;`
+                                replacing null is the key shift — the compiler
+                                forces you to handle "nothing".
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `structs`, `enums`,
+                                `options`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Model a small domain as a data-carrying
+                                enum (e.g. a `Shape` with Circle/Rect variants
+                                and an `area()` method dispatched via match).
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — LIFETIMES (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 10.3. Lifetimes are NOT about
+                                how long values live — they're labels relating
+                                references so the compiler can prove nothing
+                                dangles. Then watch Jon Gjengset's "Crust of
+                                Rust: Lifetime Annotations" — the best
+                                explanation anywhere.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `lifetimes`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "what does a lifetime annotation
+                                actually mean?", "when do you need explicit
+                                lifetimes vs elision?"
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — CONSOLIDATE (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Finish any leftover Rustlings from
+                                intro through lifetimes.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Refactor Week 0's CLI to use borrowed
+                                slices throughout and add a custom struct. Notice
+                                how much less you reach for `.clone()` now.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Read "References and Borrowing" in Rust
+                                by Example for a second angle on the same ideas.
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: TOKENIZER (3 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project — build a tokenizer/lexer for
+                                arithmetic ("3 + 4 * 2" → tokens). Input: &str.
+                                Output: Vec&lt;Token&gt; where Token is an enum
+                                (Number(f64), Plus, Star, LParen, …). This forces
+                                ownership, borrowing, enums, and char iteration
+                                together. Commit with a README.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip"
+                                    >Book Ch 4–6, 10.3</span
+                                ><span class="resource-chip"
+                                    >Crust of Rust (YouTube)</span
+                                ><span class="resource-chip">rustlings</span
+                                ><span class="resource-chip"
+                                    >rust-by-example</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- W2 -->
+                <div class="week-card" id="wc-2">
+                    <button class="week-header" onclick="toggleWeek(2)">
+                        <div class="week-badge">WK 2</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Traits, Generics & Error Handling
+                            </div>
+                            <div class="week-focus">
+                                Polymorphism the Rust way + HashMap from scratch
+                                · ~15 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-2">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">THE HASHMAP WEEK: </span
+                            >Generics + traits land first because you need both
+                            to build a real generic hashmap — your requested
+                            centerpiece project.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — GENERICS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 10.1 (generics +
+                                monomorphization). Generic functions, structs,
+                                enums, and the zero-cost story (generics compile
+                                to specialized code).
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `generics`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Write a generic function with a trait
+                                bound (e.g. `fn largest&lt;T: PartialOrd&gt;(items:
+                                &[T]) -> &T`).
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — TRAITS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 10.2 + Ch. 17. Traits are
+                                interfaces. Learn trait bounds, `impl Trait`, and
+                                `dyn Trait` (dynamic dispatch) vs generics
+                                (static dispatch). Meet the core derives: Debug,
+                                Clone, PartialEq, Eq, Hash, Default.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `traits`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "static vs dynamic dispatch,
+                                when each?", "what does #[derive(Hash)]
+                                require?"
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — ERROR HANDLING (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 9 (Result, the `?` operator,
+                                panic vs recoverable). Then the ecosystem
+                                standard: `thiserror` for libraries (derive your
+                                error enum) and `anyhow` for applications (easy
+                                propagation). This is how real Rust handles
+                                errors — no exceptions.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `error_handling`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Give your Week 1 tokenizer real error
+                                handling — return a `TokenizeError` (via
+                                thiserror) instead of panicking on bad input.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — HASHMAP FROM SCRATCH, PART 1 (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Refresh hashing + separate chaining vs
+                                open addressing (you've built one in Python — now
+                                do it in Rust). Skim the real
+                                std::collections::HashMap docs to see the API
+                                you're emulating.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Start `myhashmap`. Define `struct
+                                HashMap&lt;K, V&gt; { buckets: Vec&lt;Vec&lt;(K,
+                                V)&gt;&gt;, len: usize }`. Implement `new()` and
+                                `insert(K, V)` with `K: Hash + Eq`, using std's
+                                DefaultHasher to map keys to a bucket index.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — HASHMAP FROM SCRATCH, PART 2 (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Implement `get(&self, key: &K) ->
+                                Option&lt;&V&gt;`, `remove`, `contains_key`, and the
+                                interesting part — resize/rehash when the load
+                                factor passes ~0.75.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Write `#[test]` unit tests covering
+                                insert/get/remove/resize and hash collisions. Run
+                                `cargo test`.
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: FINISH & POLISH HASHMAP (3–4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project — make it ergonomic: implement
+                                the `Index` trait so `map[key]` works, add an
+                                `iter()` / `IntoIterator`, and benchmark against
+                                std's HashMap on 1M inserts (criterion or simple
+                                timing). README explaining chaining vs open
+                                addressing, your load factor, and the numbers.
+                                This is a genuine portfolio centerpiece.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip"
+                                    >Book Ch 9, 10, 17</span
+                                ><span class="resource-chip"
+                                    >thiserror + anyhow</span
+                                ><span class="resource-chip"
+                                    >std HashMap docs</span
+                                ><span class="resource-chip">crates.io</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- W3 -->
+                <div class="week-card" id="wc-3">
+                    <button class="week-header" onclick="toggleWeek(3)">
+                        <div class="week-badge">WK 3</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Iterators, Smart Pointers, Modules & Tooling
+                            </div>
+                            <div class="week-focus">
+                                Idiomatic Rust + reading fluency · ~16 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-3">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">READING-FLUENCY WEEK: </span
+                            >Iterators + std combinators are how idiomatic Rust
+                            is written, so this is what makes you able to READ
+                            any Rust codebase.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — CLOSURES & ITERATORS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 13. Fn/FnMut/FnOnce, the
+                                Iterator trait, map/filter/fold/collect. Iterators
+                                are lazy and `collect()` is type-driven — that
+                                part is new vs Python comprehensions, but it'll
+                                click fast.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `iterators` (all — they're
+                                meaty and worth it).
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Rewrite a loop-heavy function from an
+                                earlier project as an iterator chain.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — SMART POINTERS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 15 (Box, Rc, RefCell, Deref,
+                                Drop). When you need heap allocation (Box), shared
+                                ownership (Rc), or interior mutability (RefCell) —
+                                and why `Rc&lt;RefCell&lt;T&gt;&gt;` exists.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `smart_pointers`, `box`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "Box vs Rc vs RefCell, what does
+                                each give you?", "what is interior mutability?"
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — MODULES, CRATES, WORKSPACES (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 7 (modules, paths, pub, use) +
+                                Ch. 14 (Cargo, workspaces, publishing). How to lay
+                                out a real multi-file project.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Reorganize your hashmap into a proper
+                                library crate with modules, add doc comments
+                                (`///`), and run `cargo doc --open`.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — STD FLUENCY + LEETCODE IN RUST (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Tour std::collections (Vec, HashMap,
+                                BTreeMap, HashSet, VecDeque) and the Option/Result
+                                combinators (map, and_then, ok_or,
+                                unwrap_or_else) — they appear in nearly every
+                                file.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Solve 2–3 LeetCode mediums in Rust — you
+                                know the patterns from your Python prep, now feel
+                                them in Rust (Two Sum → HashMap, Group Anagrams →
+                                entry API, Valid Parentheses → Vec as stack).
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — TESTING, CLIPPY, FMT, CI (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 11 (unit tests, integration
+                                tests in tests/, #[cfg(test)]). Then run `cargo
+                                clippy` on everything and fix every lint — clippy
+                                is the best Rust teacher you have. `cargo fmt` to
+                                finish.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Add a GitHub Actions CI that runs `cargo
+                                test`, `cargo clippy -- -D warnings`, and `cargo
+                                fmt --check`. A green CI badge on your repo signals
+                                professionalism.
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: rgrep CLI (3–4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project — build a grep clone (`rgrep`):
+                                read a file, find a pattern, print matching lines
+                                with line numbers and optional case-insensitivity.
+                                Use `clap` for args (the standard CLI crate),
+                                Result-based errors, and iterators for line
+                                processing. Bonus: colored output (`colored`
+                                crate) and `--recursive`. The canonical first
+                                "real tool".
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip"
+                                    >Book Ch 7, 11–15</span
+                                ><span class="resource-chip">clap docs</span
+                                ><span class="resource-chip">cargo clippy</span
+                                ><span class="resource-chip">leetcode.com</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /phase 1 -->
+
+            <!-- ═══════════ PHASE 2 ═══════════ -->
+            <div
+                class="phase-section"
+                id="phase-1"
+                style="--phase-color: #4fb0a0"
+            >
+                <div
+                    class="phase-header"
+                    style="border-left: 3px solid #4fb0a0"
+                >
+                    <div class="phase-header-title" style="color: #4fb0a0">
+                        Phase 2: Async & Networking
+                    </div>
+                    <div class="phase-header-sub">
+                        Weeks 4–5 · Concurrency, async/await, and real
+                        network/backend services · your networking + cloud
+                        interest
+                    </div>
+                </div>
+
+                <!-- W4 -->
+                <div class="week-card" id="wc-4">
+                    <button class="week-header" onclick="toggleWeek(4)">
+                        <div class="week-badge">WK 4</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Concurrency & Async Foundations
+                            </div>
+                            <div class="week-focus">
+                                Threads, Send/Sync, async/await, tokio · ~16 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-4">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">THE BRIDGE TO NETWORKING: </span
+                            >First fearless concurrency (threads), then the async
+                            model that every Rust network service is built on.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — THREADS & SHARED STATE (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 16. Threads, `move` closures,
+                                channels (mpsc), and Arc + Mutex for shared
+                                state. The Send and Sync marker traits are WHY
+                                the borrow checker turns data races into compile
+                                errors.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Rustlings `threads`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Spawn N threads that each sum part of a
+                                large Vec and combine the results over a channel.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — ATOMICS & THE WHY (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Read Ch. 1–2 of Mara Bos's "Rust Atomics
+                                and Locks" (free at marabos.nl/atomics) — the
+                                clearest account of Send/Sync, Arc, and Mutex
+                                internals. You don't need all of it; Ch 1–2 cement
+                                the model.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "what do Send and Sync mean?",
+                                "Arc vs Rc, why two types?", "why are data races a
+                                compile error in Rust?"
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — ASYNC CONCEPTS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Book Ch. 17 (async/await) + the async
+                                book intro. The model: an `async fn` returns a
+                                Future, Futures are LAZY (do nothing until
+                                polled), and you need a runtime to drive them.
+                                Concurrency without (necessarily) parallelism.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Watch Jon Gjengset "Crust of Rust:
+                                async/await" for the underlying mental model
+                                (poll, wakers, the state machine).
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — TOKIO (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Work through the official tokio tutorial
+                                (tokio.rs/tokio/tutorial) — Hello Tokio, Spawning,
+                                Shared State, Channels. tokio is THE async runtime
+                                (async-std is deprecated). Learn #[tokio::main],
+                                tokio::spawn, .await, tokio::select!.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Fetch 5 URLs concurrently with `reqwest`
+                                and report which returns first (tokio::join! or
+                                spawn + collect).
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — ASYNC PATTERNS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Async channels (tokio::sync::mpsc),
+                                tokio::sync::Mutex, and timeouts
+                                (tokio::time::timeout). Key gotcha: holding a std
+                                Mutex across an `.await` is a bug — learn why.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "why are futures lazy?", "std
+                                Mutex vs tokio Mutex, when each?", "what does
+                                `.await` actually do?"
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: ASYNC TCP CHAT SERVER (3–4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project — build an async TCP server with
+                                tokio. Start with an echo server (TcpListener,
+                                accept loop, one task per connection). Then extend
+                                to a multi-client chat: broadcast each message to
+                                all clients via tokio::sync::broadcast. Test with
+                                several `nc`/telnet clients. Real network
+                                programming, strong portfolio piece.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip">Book Ch 16–17</span
+                                ><span class="resource-chip"
+                                    >marabos.nl/atomics</span
+                                ><span class="resource-chip"
+                                    >tokio.rs/tokio/tutorial</span
+                                ><span class="resource-chip">async-book</span
+                                ><span class="resource-chip">reqwest</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- W5 -->
+                <div class="week-card" id="wc-5">
+                    <button class="week-header" onclick="toggleWeek(5)">
+                        <div class="week-badge">WK 5</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Network Programming & Backend Services
+                            </div>
+                            <div class="week-focus">
+                                HTTP, axum, serde, sqlx → a deployed service ·
+                                ~18 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-5">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">THE BACKEND WEEK: </span
+                            >Build a real HTTP service end to end — routing →
+                            JSON → state → database → deployed. This is the
+                            cloud/backend story.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — HTTP & AXUM BASICS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Intro to axum — the standard modern web
+                                framework (built on tokio + hyper + tower; axum
+                                0.8 dropped the async_trait requirement). Routers,
+                                handlers, and extractors (Path, Query, Json,
+                                State). Read the axum docs + examples.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: A "hello axum" server with GET /health,
+                                GET /hello/:name, and a route returning JSON.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — JSON & SERDE (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: serde + serde_json — THE serialization
+                                framework, used everywhere. `#[derive(Serialize,
+                                Deserialize)]`. See how axum's `Json&lt;T&gt;`
+                                extractor uses it.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: A CRUD JSON API for an in-memory
+                                resource (notes/todos) behind `Arc&lt;RwLock&lt;…&gt;&gt;`
+                                — POST/GET/PUT/DELETE with correct status codes
+                                and JSON error bodies.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — STATE, MIDDLEWARE, OBSERVABILITY (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Shared state (State extractor),
+                                middleware via tower (logging, timeouts), and
+                                error handling by implementing `IntoResponse` for
+                                your error type. Add structured logging with
+                                `tracing` + `tracing-subscriber` (the standard
+                                observability stack).
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Add request logging (tracing) and a
+                                global error handler returning consistent JSON
+                                error envelopes.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — DATABASES WITH SQLX (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: sqlx — async, compile-time-checked SQL
+                                (no ORM magic). Connect to SQLite or Postgres, run
+                                migrations, and query with `query!` / `query_as!`
+                                macros that verify your SQL against the schema at
+                                compile time.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Swap your API's in-memory store for a
+                                real SQLite database via sqlx, with migrations.
+                                Now you have a persistent backend.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — LOWER-LEVEL NETWORKING (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Drop a layer — read about `hyper` (the
+                                HTTP library under axum) and the TCP → HTTP →
+                                framework stack. Skim Book Ch. 21 (the
+                                multithreaded web server) to contrast a
+                                hand-rolled thread-per-connection server with the
+                                async approach.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "what does an extractor do in
+                                axum?", "why is sqlx compile-time checked?", "TCP
+                                vs HTTP, what layer is each?"
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: DEPLOYABLE BACKEND (3–4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project — polish your axum + sqlx service
+                                into something deployable: config via env vars, a
+                                multi-stage Dockerfile (→ tiny image), and a
+                                health endpoint. Deploy free (Shuttle.rs, Fly.io,
+                                or Railway) so you have a LIVE URL. README with the
+                                architecture + link. Exactly the project that
+                                lands Rust backend interviews.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip">docs.rs/axum</span
+                                ><span class="resource-chip">serde.rs</span
+                                ><span class="resource-chip">docs.rs/sqlx</span
+                                ><span class="resource-chip">docs.rs/tracing</span
+                                ><span class="resource-chip">shuttle.rs</span
+                                ><span class="resource-chip"
+                                    >Zero to Production</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /phase 2 -->
+
+            <!-- ═══════════ PHASE 3 ═══════════ -->
+            <div
+                class="phase-section"
+                id="phase-2"
+                style="--phase-color: #d2622e"
+            >
+                <div
+                    class="phase-header"
+                    style="border-left: 3px solid #d2622e"
+                >
+                    <div class="phase-header-title" style="color: #d2622e">
+                        Phase 3: WASM & Developer Tooling
+                    </div>
+                    <div class="phase-header-sub">
+                        Weeks 6–8 · WebAssembly (browser + server) and dev
+                        tooling, then a capstone · your strongest interests
+                    </div>
+                </div>
+
+                <!-- W6 -->
+                <div class="week-card" id="wc-6">
+                    <button class="week-header" onclick="toggleWeek(6)">
+                        <div class="week-badge">WK 6</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                WebAssembly in the Browser
+                            </div>
+                            <div class="week-focus">
+                                wasm-bindgen, wasm-pack, web-sys · Rust in the
+                                browser · ~16 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-6">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">YOUR TOP INTEREST: </span
+                            >Get Rust compiling to WASM and running in a browser,
+                            then prove a real speedup over JS.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — WASM FUNDAMENTALS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: What WASM is and why Rust is a top
+                                choice (no GC → tiny, fast binaries). Read the
+                                "Rust and WebAssembly" book intro. Install:
+                                `rustup target add wasm32-unknown-unknown`, then
+                                `wasm-pack`.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Hello WASM — `cargo new --lib`, set
+                                `crate-type = ["cdylib"]`, export `add(a,b)` and
+                                `greet() -> String` with `#[wasm_bindgen]`, build
+                                with `wasm-pack build --target web`, and call it
+                                from a tiny index.html. Seeing Rust run in your
+                                browser is the unlock.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — WASM-BINDGEN DEEPER (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: The wasm-bindgen guide. Passing strings,
+                                structs, and closures across the JS↔WASM boundary,
+                                and why that boundary is expensive (data copying,
+                                UTF-8↔UTF-16) — so prefer few, coarse-grained
+                                calls. Meet js-sys (JS builtins) and web-sys (DOM
+                                / Web APIs).
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔥 DRILL: Export a Rust struct (e.g. a `Counter`
+                                with methods) and drive it from JS; pass a JS array
+                                in and return a transformed one.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — THE GAME OF LIFE (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN + 🔒 BUILD: Work through the canonical
+                                Conway's Game of Life tutorial in the Rust+WASM
+                                book — the best end-to-end intro. Rust owns the
+                                universe state; JS renders to canvas. You'll use
+                                web-sys and handle the boundary properly.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — PERFORMANCE & SIZE (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Benchmark a compute-heavy function
+                                (mandelbrot, image filter, your parser) in
+                                Rust-WASM vs plain JS. Shrink the binary:
+                                `wasm-opt`, `opt-level = "z"`, `lto = true`, strip,
+                                and inspect with `twiggy`. Add
+                                `console_error_panic_hook` for debugging.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Take one genuinely compute-heavy task and
+                                prove the WASM speedup with real numbers in your
+                                README.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — FRONTEND INTEGRATION (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: How WASM fits real apps — `trunk` (the
+                                Rust-WASM web bundler) for all-Rust frontends, or
+                                publishing a wasm-pack package to npm for a JS/TS
+                                app. Glance at Leptos/Yew/Dioxus so you know the
+                                landscape — but don't fall down that rabbit hole
+                                now.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "why is the JS↔WASM boundary
+                                expensive?", "when is Rust-WASM worth it vs JS?",
+                                "what does wasm-bindgen generate?"
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: WASM IMAGE FILTER (3–4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project — an in-browser image filter app.
+                                Rust-WASM does pixel processing (grayscale, blur,
+                                edge detection); JS handles upload + canvas. Clean
+                                API, optimized binary, and a before/after with a
+                                JS-vs-WASM timing comparison. Deploy to GitHub
+                                Pages. A flagship piece showcasing your top
+                                interest.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip"
+                                    >rustwasm.github.io/docs/book</span
+                                ><span class="resource-chip"
+                                    >wasm-bindgen guide</span
+                                ><span class="resource-chip">docs.rs/web-sys</span
+                                ><span class="resource-chip">trunkrs.dev</span
+                                ><span class="resource-chip"
+                                    >MDN WebAssembly</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- W7 -->
+                <div class="week-card" id="wc-7">
+                    <button class="week-header" onclick="toggleWeek(7)">
+                        <div class="week-badge">WK 7</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Server-Side WASM, WASI & Macros
+                            </div>
+                            <div class="week-focus">
+                                Wasmtime, the Component Model + proc macros ·
+                                ~17 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-7">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">WASM BEYOND THE BROWSER + DEV TOOLING: </span
+                            >Where WASM meets your cloud interest (edge, plugins),
+                            then the macro machinery behind every dev tool.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — WASI & WASMTIME (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: WASM outside the browser. WASI gives
+                                sandboxed access to files/env/sockets. Targets were
+                                renamed: `wasm32-wasip1` (Tier 2, stable) and
+                                `wasm32-wasip2` (adds networking/sockets). Install
+                                Wasmtime, the standalone runtime.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Compile a Rust CLI to `wasm32-wasip1`
+                                and run it with `wasmtime`. Feel the "compile
+                                once, run sandboxed anywhere" model.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — THE COMPONENT MODEL (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: The WebAssembly Component Model + WIT
+                                (Wasm Interface Types) — portable, language-
+                                agnostic components. `cargo component` +
+                                `wit-bindgen` define interfaces in .wit and
+                                generate bindings. Cutting-edge and a genuine CV
+                                differentiator.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Define a small WIT interface, implement
+                                it in Rust with `cargo component`, and inspect /
+                                run it with `wasm-tools` / Wasmtime.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — WHERE SERVER WASM MATTERS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Real-world server WASM — edge compute
+                                (Fastly, Cloudflare Workers), safe plugin systems
+                                (run untrusted user code via wasmtime), and FaaS.
+                                The why: instant cold starts, strong sandboxing,
+                                language-agnostic. This connects WASM to your
+                                cloud/backend interest.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Anki — "WASI p1 vs p2?", "what problem
+                                does the Component Model solve?", "why run WASM
+                                server-side instead of containers?"
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — MACROS PART 1: DECLARATIVE (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Start dev tooling. `macro_rules!`
+                                (declarative macros) — pattern-matching code
+                                generation. Book Ch. 20 macro section + skim "The
+                                Little Book of Rust Macros". When macros earn
+                                their keep vs functions/generics.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Write a useful `macro_rules!` macro —
+                                e.g. a `hashmap!{ "a" =&gt; 1 }` literal, or a
+                                test-case generator.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — MACROS PART 2: PROCEDURAL (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Procedural macros — the machinery behind
+                                `#[derive(...)]` and serde. The `proc-macro2`,
+                                `syn`, and `quote` crates. Watch Jon Gjengset's
+                                "Crust of Rust: Declarative & Procedural Macros".
+                                Deep dev-tooling territory.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Write a simple derive macro (e.g.
+                                `#[derive(Builder)]` generating a builder). Even a
+                                small one teaches you how the whole derive
+                                ecosystem works.
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — PROJECT: PICK YOUR TRACK (3–4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday project (pick one) — (a) a WASM plugin
+                                host: a Rust app using wasmtime that loads and runs
+                                a user-supplied .wasm plugin against a defined WIT
+                                interface (sandboxed extensibility — very
+                                impressive); OR (b) a working derive-macro crate
+                                published to crates.io with docs and tests. Either
+                                is a serious WASM / dev-tooling piece.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip">wasmtime.dev</span
+                                ><span class="resource-chip"
+                                    >component-model.bytecodealliance.org</span
+                                ><span class="resource-chip">wit-bindgen</span
+                                ><span class="resource-chip"
+                                    >Little Book of Rust Macros</span
+                                ><span class="resource-chip">docs.rs/syn</span
+                                ><span class="resource-chip">docs.rs/quote</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- W8 -->
+                <div class="week-card" id="wc-8">
+                    <button class="week-header" onclick="toggleWeek(8)">
+                        <div class="week-badge">WK 8</div>
+                        <div class="week-meta">
+                            <div class="week-title">
+                                Advanced Rust, a Real Dev Tool & Capstone
+                            </div>
+                            <div class="week-focus">
+                                unsafe, FFI, perf → ship the capstone · ~18 hrs
+                            </div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-8">
+                                NOT STARTED
+                            </div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">
+                            <span class="daily-label">TIE IT TOGETHER: </span
+                            >The advanced corners that let you READ any Rust code
+                            (unsafe, FFI), plus a capstone that plays to your
+                            three interests.
+                        </div>
+                        <div class="tasks-label" style="margin-top: 6px">
+                            MONDAY — UNSAFE & THE RUSTONOMICON (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: `unsafe` Rust — raw pointers, unsafe fn,
+                                the five superpowers, and the contract YOU must
+                                uphold. Read the Rustonomicon intro chapters. Key
+                                insight: unsafe doesn't disable the borrow checker;
+                                it grants 5 specific abilities while you guarantee
+                                soundness. Essential for reading std/library
+                                internals.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Reimplement a tiny thing with unsafe
+                                correctly (e.g. `split_at_mut` by hand, or a simple
+                                bump allocator) and document the safety
+                                invariants.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            TUESDAY — FFI (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Foreign Function Interface — calling C
+                                from Rust (`extern "C"`, `#[link]`) and exposing
+                                Rust to C (`#[no_mangle]`, now requiring `unsafe`
+                                in the 2024 edition). `bindgen` / `cbindgen`. FFI
+                                also underpins Python extensions — relevant to you
+                                via PyO3.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Call a simple C function from Rust, OR
+                                expose a Rust function to Python with PyO3 and call
+                                it from a Python script.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            WEDNESDAY — PERFORMANCE & PROFILING (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Make Rust fast — criterion (statistical
+                                benchmarks), `cargo flamegraph` (profiling),
+                                avoiding needless allocations/clones, &str over
+                                String, iterators over manual loops, and release vs
+                                debug builds. Read a couple of fasterthanlime's
+                                performance posts.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Profile and optimize an earlier project
+                                (the hashmap or image filter). Show before/after
+                                numbers.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            THURSDAY — READ REAL CODE + IDIOMS (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Reading-fluency drill — read the source
+                                of a small, well-written crate (itertools
+                                internals, or a module of ripgrep/fd). Skim
+                                "Effective Rust" idioms and "Rust for Rustaceans"
+                                chapters on API design + type layout. Goal: open
+                                ANY Rust file and follow it.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Find a "good first issue" on a Rust
+                                project you've used (clap, axum, a tokio crate).
+                                Reading the issue + codebase counts; a small PR is
+                                a bonus and a fantastic signal.
+                            </div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">
+                            FRIDAY — CAPSTONE PLANNING + POLISH (2.5 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Pick your capstone (see Saturday) and
+                                scaffold it today — structure, CI, README
+                                skeleton.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                📗 LEARN: Skim your Anki deck end to end. Walk the
+                                Book's table of contents and confirm no chapter is
+                                still a black box — anything fuzzy, mark it Shaky.
+                            </div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">
+                            SATURDAY — CAPSTONE: SHIP IT (4 HRS)
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                Saturday capstone (pick what excites you most) —
+                                1) a real developer CLI (fast file finder, log
+                                parser, code-stats, scaffolder) polished with clap,
+                                color, config, tests, CI, published to crates.io;
+                                2) a networked service with a WASM twist — your
+                                axum backend running user-submitted WASM plugins
+                                via wasmtime (networking + WASM + backend in one,
+                                the strongest signal); or 3) a browser WASM app
+                                (extend the image filter, or a WASM data-viz /
+                                mini-game) deployed live.
+                            </div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">
+                                🔒 BUILD: Write a great README, record a 60-second
+                                demo GIF, pin it on your GitHub profile, and list
+                                all 8 weeks of projects in your portfolio. You can
+                                now read and write idiomatic Rust across WASM,
+                                networking/backend, and tooling.
+                            </div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips">
+                                <span class="resource-chip"
+                                    >doc.rust-lang.org/nomicon</span
+                                ><span class="resource-chip"
+                                    >docs.rs/criterion</span
+                                ><span class="resource-chip">pyo3.rs</span
+                                ><span class="resource-chip"
+                                    >Rust for Rustaceans</span
+                                ><span class="resource-chip"
+                                    >effective-rust.com</span
+                                ><span class="resource-chip">ripgrep source</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /phase 3 -->
+
+            <!-- ═══════════ SHAKY ═══════════ -->
+            <div
+                class="phase-section"
+                id="phase-shaky"
+                style="--phase-color: #c98a4b"
+            >
+                <div
+                    class="phase-header"
+                    style="border-left: 3px solid #c98a4b"
+                >
+                    <div class="phase-header-title" style="color: #c98a4b">
+                        ⚠ Shaky Concepts
+                    </div>
+                    <div class="phase-header-sub">
+                        Tasks you completed but aren't confident in — click to
+                        revisit
+                    </div>
+                </div>
+                <div
+                    id="shaky-empty"
+                    style="
+                        display: none;
+                        padding: 40px 0;
+                        text-align: center;
+                        color: var(--ink-faint);
+                        font-family: var(--mono);
+                        font-size: .8rem;
+                        letter-spacing: .1em;
+                        text-transform: uppercase;
+                    "
+                >
+                    No shaky concepts yet — mark tasks with ? to track them here
+                </div>
+                <div id="shaky-list"></div>
+            </div>
+        </div>
+        <!-- /main -->
+
+        <script>
+            // ── DATA ──
+            const state = {
+                tasks: JSON.parse(localStorage.getItem("rsp_tasks") || "{}"),
+            };
+
+            function save() {
+                try {
+                    localStorage.setItem(
+                        "rsp_tasks",
+                        JSON.stringify(state.tasks),
+                    );
+                } catch (e) {}
+            }
+
+            // ── TOGGLE WEEK ──
+            function toggleWeek(n) {
+                const card = document.getElementById("wc-" + n);
+                const isOpen = card.classList.contains("open");
+                // close all in active phase
+                document
+                    .querySelectorAll(".phase-section.active .week-card")
+                    .forEach((c) => c.classList.remove("open"));
+                if (!isOpen) card.classList.add("open");
+                try {
+                    localStorage.setItem(
+                        "rsp_open_week",
+                        isOpen ? "" : String(n),
+                    );
+                } catch (e) {}
+                updateAll();
+            }
+
+            // ── TOGGLE TASK — 4 states: 0=blank, 1=in-progress, 2=done, 3=shaky ──
+            function toggleTask(row) {
+                const card = row.closest(".week-card");
+                const wid = card.id.replace("wc-", "");
+                const rows = Array.from(card.querySelectorAll(".task-row"));
+                const idx = rows.indexOf(row);
+                const key = "w" + wid + "-" + idx;
+                const cur = state.tasks[key] || 0;
+                state.tasks[key] = (cur + 1) % 4;
+                save();
+                renderTask(row, state.tasks[key]);
+                updateBadge(wid, card);
+                updateTotal();
+                renderShakyPanel();
+            }
+
+            function renderTask(row, val) {
+                const box = row.querySelector(".task-checkbox");
+                const v = val || 0;
+                box.classList.remove("in-progress", "done-check", "shaky");
+                row.classList.remove("in-progress-row", "done", "shaky-row");
+                if (v === 1) {
+                    box.classList.add("in-progress");
+                    row.classList.add("in-progress-row");
+                } else if (v === 2) {
+                    box.classList.add("done-check");
+                    row.classList.add("done");
+                } else if (v === 3) {
+                    box.classList.add("shaky");
+                    row.classList.add("shaky-row");
+                }
+            }
+
+            // ── BADGE — in-progress=0.5, done=1, shaky=1 (done but flagged) ──
+            function updateBadge(wid, card) {
+                const rows = card.querySelectorAll(".task-row");
+                let score = 0;
+                let shakyCount = 0;
+                rows.forEach((r, i) => {
+                    const v = state.tasks["w" + wid + "-" + i] || 0;
+                    if (v === 2) score += 1;
+                    else if (v === 1) score += 0.5;
+                    else if (v === 3) {
+                        score += 1;
+                        shakyCount++;
+                    }
+                });
+                const pct = rows.length
+                    ? Math.round((score / rows.length) * 100)
+                    : 0;
+                const badge = document.getElementById("badge-" + wid);
+                if (!badge) return;
+                badge.style.opacity = "1";
+                if (pct >= 100 && shakyCount === 0) {
+                    badge.textContent = "✓ done";
+                    badge.style.color = "#4fb0a0";
+                    badge.style.borderColor = "#2e7d72";
+                    badge.style.background = "rgba(79,176,160,0.1)";
+                } else if (pct >= 100 && shakyCount > 0) {
+                    badge.textContent = "⚠ " + shakyCount + " shaky";
+                    badge.style.color = "#c98a4b";
+                    badge.style.borderColor = "#c98a4b";
+                    badge.style.background = "rgba(201,138,75,0.1)";
+                } else if (pct > 0) {
+                    badge.textContent = pct + "%";
+                    badge.style.color = "#f0813f";
+                    badge.style.borderColor = "#9e3b17";
+                    badge.style.background = "rgba(210,98,46,0.1)";
+                } else {
+                    badge.textContent = "not started";
+                    badge.style.color = "#727a86";
+                    badge.style.borderColor = "#3a4150";
+                    badge.style.background = "transparent";
+                }
+            }
+
+            // ── TOTAL PROGRESS — in-progress=0.5, done=1, shaky=1 ──
+            function updateTotal() {
+                let total = 0,
+                    score = 0;
+                document.querySelectorAll(".week-card").forEach((card) => {
+                    const wid = card.id.replace("wc-", "");
+                    const rows = card.querySelectorAll(".task-row");
+                    rows.forEach((r, i) => {
+                        total++;
+                        const v = state.tasks["w" + wid + "-" + i] || 0;
+                        if (v === 2) score += 1;
+                        else if (v === 1) score += 0.5;
+                        else if (v === 3) score += 1;
+                    });
+                });
+                const pct = total ? Math.round((score / total) * 100) : 0;
+                document.getElementById("totalPct").textContent = pct + "%";
+                document.getElementById("totalBar").style.width = pct + "%";
+
+                // update shaky tab badge
+                updateShakyTabCount();
+            }
+
+            function updateShakyTabCount() {
+                let count = 0;
+                Object.values(state.tasks).forEach((v) => {
+                    if (v === 3) count++;
+                });
+                const btn = document.getElementById("shaky-tab-btn");
+                if (count > 0) {
+                    btn.textContent = "⚠ Shaky (" + count + ")";
+                } else {
+                    btn.textContent = "⚠ Shaky Concepts";
+                }
+            }
+
+            // ── SHAKY PANEL ──
+            function renderShakyPanel() {
+                const list = document.getElementById("shaky-list");
+                const empty = document.getElementById("shaky-empty");
+
+                // gather all shaky tasks grouped by week
+                const byWeek = {};
+                document.querySelectorAll(".week-card").forEach((card) => {
+                    const wid = card.id.replace("wc-", "");
+                    const rows = Array.from(card.querySelectorAll(".task-row"));
+                    const weekTitle = card.querySelector(".week-title")
+                        ? card.querySelector(".week-title").textContent.trim()
+                        : "Week " + wid;
+                    rows.forEach((r, i) => {
+                        const key = "w" + wid + "-" + i;
+                        if ((state.tasks[key] || 0) === 3) {
+                            if (!byWeek[wid])
+                                byWeek[wid] = { title: weekTitle, tasks: [] };
+                            const txt = r.querySelector(".task-text")
+                                ? r
+                                      .querySelector(".task-text")
+                                      .textContent.trim()
+                                : "";
+                            byWeek[wid].tasks.push({ text: txt, rowIdx: i });
+                        }
+                    });
+                });
+
+                const weeks = Object.keys(byWeek);
+                if (weeks.length === 0) {
+                    empty.style.display = "block";
+                    list.innerHTML = "";
+                    // remove summary bar if exists
+                    const oldBar = document.getElementById("shaky-summary");
+                    if (oldBar) oldBar.remove();
+                    return;
+                }
+                empty.style.display = "none";
+
+                // summary bar
+                let totalShaky = 0;
+                weeks.forEach((w) => {
+                    totalShaky += byWeek[w].tasks.length;
+                });
+                const weekSpan = weeks.length;
+
+                let summaryHTML = `<div class="shaky-summary-bar" id="shaky-summary">
+                    <div class="s-stat"><div class="s-val">${totalShaky}</div><div class="s-lbl">TOTAL SHAKY</div></div>
+                    <div class="s-stat"><div class="s-val">${weekSpan}</div><div class="s-lbl">WEEKS AFFECTED</div></div>
+                </div>`;
+
+                let html = summaryHTML;
+                weeks.sort((a, b) => Number(a) - Number(b));
+                weeks.forEach((wid) => {
+                    const group = byWeek[wid];
+                    const wLabel = "WK " + wid.toUpperCase();
+                    html += `<div class="shaky-week-group">
+                        <div class="shaky-week-label">
+                            <span>${wLabel} · ${group.title}</span>
+                            <span class="shaky-count">${group.tasks.length} SHAKY</span>
+                        </div>`;
+                    group.tasks.forEach((t) => {
+                        html += `<div class="shaky-task-entry" onclick="jumpToWeek('${wid}')">
+                            <div class="shaky-dot"></div>
+                            <div class="shaky-task-text">${t.text}</div>
+                            <div class="shaky-goto">→ GO TO WEEK</div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                });
+
+                list.innerHTML = html;
+                updateShakyTabCount();
+            }
+
+            function jumpToWeek(wid) {
+                // find which phase this week belongs to and switch to it
+                const card = document.getElementById("wc-" + wid);
+                if (!card) return;
+                const section = card.closest(".phase-section");
+                if (!section) return;
+                const phaseId = section.id.replace("phase-", "");
+                if (phaseId === "shaky") return;
+
+                // switch tab
+                const tabs = document.querySelectorAll(".phase-tab");
+                const sections = document.querySelectorAll(".phase-section");
+                sections.forEach((s) => s.classList.remove("active"));
+                tabs.forEach((b) => b.classList.remove("active"));
+
+                section.classList.add("active");
+                // find matching tab by phase index
+                const phaseIdx = parseInt(phaseId);
+                if (!isNaN(phaseIdx) && tabs[phaseIdx]) {
+                    tabs[phaseIdx].classList.add("active");
+                }
+
+                // close all week cards in that phase, open the target
+                section
+                    .querySelectorAll(".week-card")
+                    .forEach((c) => c.classList.remove("open"));
+                card.classList.add("open");
+                try {
+                    localStorage.setItem("rsp_open_week", String(wid));
+                } catch (e) {}
+
+                // scroll to it
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+            }
+
+            // ── SHOW PHASE ──
+            function showPhase(idx, btn) {
+                document
+                    .querySelectorAll(".phase-section")
+                    .forEach((s) => s.classList.remove("active"));
+                document
+                    .querySelectorAll(".phase-tab")
+                    .forEach((b) => b.classList.remove("active"));
+                if (idx === "shaky") {
+                    document
+                        .getElementById("phase-shaky")
+                        .classList.add("active");
+                    renderShakyPanel();
+                } else {
+                    document
+                        .getElementById("phase-" + idx)
+                        .classList.add("active");
+                }
+                btn.classList.add("active");
+            }
+
+            // ── INIT ──
+            function updateAll() {
+                document.querySelectorAll(".week-card").forEach((card) => {
+                    const wid = card.id.replace("wc-", "");
+                    const rows = card.querySelectorAll(".task-row");
+                    rows.forEach((r, i) =>
+                        renderTask(r, state.tasks["w" + wid + "-" + i] || 0),
+                    );
+                    updateBadge(wid, card);
+                });
+                updateTotal();
+            }
+
+            // open the last-viewed week (falls back to week 0)
+            (function restoreOpenWeek() {
+                let saved = null;
+                try {
+                    saved = localStorage.getItem("rsp_open_week");
+                } catch (e) {}
+                if (saved && document.getElementById("wc-" + saved)) {
+                    jumpToWeek(saved);
+                } else {
+                    document.getElementById("wc-0").classList.add("open");
+                }
+            })();
+
+            // auto-apply learn/apply/saturday classes based on emoji and text
+            document.querySelectorAll(".task-text").forEach((el) => {
+                if (el.textContent.trim().startsWith("🔥"))
+                    el.closest(".task-row").classList.add("warm");
+                if (el.textContent.trim().startsWith("📗"))
+                    el.closest(".task-row").classList.add("learn");
+                if (el.textContent.trim().startsWith("🔒"))
+                    el.closest(".task-row").classList.add("apply");
+                if (el.textContent.trim().startsWith("Saturday"))
+                    el.closest(".task-row").classList.add("saturday");
+            });
+
+            updateAll();
+        </script>
+    </body>
+</html>
