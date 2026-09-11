@@ -1,0 +1,1898 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pixels in Rust — Image Processing in 8 Weeks</title>
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+            :root {
+                --bg: #16181d;
+                --bg-2: #1c1f26;
+                --bg-3: #232732;
+                --bg-raised: #262b36;
+                --line: #2e3340;
+                --line-2: #3a4150;
+                --ink: #ece8e1;
+                --ink-dim: #aab0bb;
+                --ink-faint: #727a86;
+                --rust: #d2622e;
+                --rust-bright: #f0813f;
+                --rust-deep: #9e3b17;
+                --patina: #4fb0a0;
+                --patina-deep: #2e7d72;
+                --copper: #c98a4b;
+                --glow: rgba(210,98,46,.16);
+                --glow-2: rgba(79,176,160,.14);
+
+                --mono-display: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+                --sans: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+                --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+                --maxw: 1080px;
+                --radius: 4px;
+
+                /* Phase colour aliases — keep _2's JS working */
+                --yellow: #f0813f;
+                --blue: #4fb0a0;
+                --orange: #d2622e;
+                --green: #4fb0a0;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+            body {
+                background:
+                    radial-gradient(900px 500px at 88% -8%, var(--glow), transparent 60%),
+                    radial-gradient(700px 500px at -5% 12%, var(--glow-2), transparent 55%),
+                    var(--bg);
+                color: var(--ink);
+                font-family: var(--sans);
+                font-size: 16px;
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+                min-height: 100vh;
+                padding-bottom: 80px;
+            }
+
+            a { color: var(--patina); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s, color .15s; }
+            a:hover { color: #6fd0c0; border-bottom-color: var(--patina-deep); }
+            a:focus-visible, button:focus-visible { outline: 2px solid var(--rust-bright); outline-offset: 2px; border-radius: 2px; }
+
+            /* ── HEADER ── */
+            .header {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: rgba(20,22,27,.9);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--line);
+                padding: 12px 24px 10px;
+            }
+            .header-inner {
+                max-width: var(--maxw);
+                margin: 0 auto;
+            }
+            .header-top {
+                display: flex;
+                align-items: center;
+                gap: 18px;
+                flex-wrap: wrap;
+            }
+            .header-brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-family: var(--mono-display);
+                font-weight: 700;
+                font-size: .95rem;
+                letter-spacing: -.01em;
+                color: var(--ink);
+            }
+            .header-brand .gear {
+                width: 20px; height: 20px;
+                color: var(--rust);
+                flex: none;
+                animation: spin 18s linear infinite;
+            }
+            @media (prefers-reduced-motion: reduce) { .header-brand .gear { animation: none; } }
+            .header-label {
+                font-family: var(--mono);
+                font-size: .7rem;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                color: var(--ink-faint);
+                margin-bottom: 2px;
+            }
+            .header-title {
+                font-family: var(--mono-display);
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--ink);
+            }
+            .header-sub {
+                font-size: .75rem;
+                color: var(--ink-faint);
+                margin-top: 1px;
+                font-family: var(--mono);
+            }
+            .header-progress-wrap {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-left: auto;
+                flex-wrap: wrap;
+            }
+            .header-buildbar {
+                font-family: var(--mono);
+                font-size: .78rem;
+                color: var(--ink-dim);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                white-space: nowrap;
+            }
+            .header-buildbar .label { color: var(--ink-faint); }
+            .header-track {
+                width: 140px; height: 8px;
+                border: 1px solid var(--line-2);
+                border-radius: 20px;
+                background: var(--bg-3);
+                overflow: hidden;
+            }
+            .header-pct-label { color: var(--ink-faint); }
+            .header-pct {
+                font-variant-numeric: tabular-nums;
+                color: var(--rust-bright);
+                min-width: 34px;
+                text-align: right;
+            }
+
+            .progress-bar-wrap {
+                width: 140px; height: 8px;
+                border: 1px solid var(--line-2);
+                border-radius: 20px;
+                background: var(--bg-3);
+                overflow: hidden;
+            }
+            .progress-bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, var(--rust-deep), var(--rust), var(--rust-bright));
+                transition: width 0.5s cubic-bezier(.2,.7,.2,1);
+            }
+
+            /* schedule badge */
+            .schedule-strip {
+                margin-top: 8px;
+                padding: 6px 10px;
+                background: var(--bg-2);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                font-family: var(--mono);
+                font-size: .72rem;
+                color: var(--ink-faint);
+                display: flex;
+                gap: 14px;
+                flex-wrap: wrap;
+            }
+            .schedule-strip span { color: var(--rust-bright); }
+
+            /* phase tabs */
+            .phase-tabs {
+                display: flex;
+                gap: 5px;
+                margin-top: 8px;
+                flex-wrap: wrap;
+            }
+            .phase-tab {
+                padding: 4px 11px;
+                border-radius: var(--radius);
+                border: 1px solid var(--line-2);
+                background: var(--bg-3);
+                color: var(--ink-faint);
+                font-size: .72rem;
+                font-weight: 700;
+                cursor: pointer;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                font-family: var(--mono);
+                transition: all 0.15s;
+            }
+            .phase-tab:hover {
+                border-color: var(--rust-deep);
+                color: var(--ink-dim);
+                background: var(--bg-raised);
+            }
+            .phase-tab.active {
+                border-color: var(--rust);
+                background: rgba(210,98,46,.12);
+                color: var(--rust-bright);
+            }
+            /* override active color per phase using inline --phase-color */
+            .phase-tab.active[style*="--phase-color"] {
+                border-color: var(--phase-color);
+                background: color-mix(in srgb, var(--phase-color) 12%, transparent);
+                color: var(--phase-color);
+            }
+
+            /* ── MAIN ── */
+            .main {
+                max-width: var(--maxw);
+                margin: 0 auto;
+                padding: 28px 24px 0;
+            }
+
+            /* timeline hint / info banner */
+            .timeline-banner {
+                padding: 16px 20px;
+                margin-bottom: 20px;
+                border: 1px solid var(--line);
+                border-left: 3px solid var(--patina);
+                border-radius: 6px;
+                background: var(--bg-2);
+                font-size: .94rem;
+                color: var(--ink-dim);
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                line-height: 1.6;
+            }
+            .timeline-banner strong { color: var(--ink); font-weight: 600; }
+
+            /* phase header */
+            .phase-header {
+                padding: 14px 20px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+                border: 1px solid var(--line);
+                background: var(--bg-2);
+            }
+            .phase-header-title {
+                font-family: var(--mono-display);
+                font-size: 1.15rem;
+                font-weight: 700;
+                color: var(--rust-bright);
+                letter-spacing: -.01em;
+            }
+            .phase-header-sub {
+                font-size: .8rem;
+                color: var(--ink-faint);
+                margin-top: 4px;
+                font-family: var(--mono);
+            }
+
+            /* ── WEEK CARD ── */
+            .week-card {
+                margin-bottom: 6px;
+                border: 1px solid var(--line);
+                background: var(--bg-2);
+                border-radius: 8px;
+                overflow: hidden;
+                transition: border-color .2s, box-shadow .2s;
+            }
+            .week-card:hover {
+                border-color: var(--line-2);
+                box-shadow: 0 6px 24px rgba(0,0,0,.22);
+            }
+            .week-card.open {
+                border-color: color-mix(in srgb, var(--phase-color) 35%, var(--line));
+            }
+
+            .week-header {
+                width: 100%;
+                padding: 16px 20px 8px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                text-align: left;
+                display: flex;
+                align-items: flex-start;
+                gap: 14px;
+                font-family: inherit;
+                transition: background 0.15s;
+            }
+            .week-card.open .week-header {
+                background: color-mix(in srgb, var(--phase-color) 5%, transparent);
+            }
+            .week-header:hover {
+                background: rgba(255,255,255,.018);
+            }
+
+            .week-badge {
+                font-size: .68rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                padding: 3px 8px;
+                border-radius: 20px;
+                min-width: 44px;
+                text-align: center;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                flex-shrink: 0;
+                margin-top: 3px;
+                color: var(--phase-color, var(--rust-bright));
+                background: color-mix(in srgb, var(--phase-color, var(--rust)) 14%, transparent);
+                border: 1px solid color-mix(in srgb, var(--phase-color, var(--rust)) 30%, transparent);
+            }
+            .week-meta {
+                flex: 1;
+                min-width: 0;
+            }
+            .week-title {
+                font-family: var(--mono-display);
+                font-size: 1.05rem;
+                font-weight: 700;
+                color: var(--ink);
+                letter-spacing: -.01em;
+                line-height: 1.2;
+            }
+            .week-focus {
+                font-size: .75rem;
+                color: var(--ink-faint);
+                margin-top: 4px;
+                font-family: var(--mono);
+            }
+
+            .week-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+                margin-top: 2px;
+            }
+            .completion-badge {
+                font-size: .68rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                padding: 3px 10px;
+                border-radius: 20px;
+                letter-spacing: .06em;
+                text-transform: uppercase;
+                border: 1px solid var(--line-2);
+                color: var(--ink-faint);
+                background: var(--bg-3);
+                white-space: nowrap;
+            }
+            .chevron {
+                color: var(--ink-faint);
+                font-size: 18px;
+                transition: transform 0.2s;
+                flex-shrink: 0;
+            }
+            .week-card.open .chevron {
+                transform: rotate(180deg);
+            }
+
+            /* ── WEEK BODY ── */
+            .week-body {
+                display: none;
+                padding: 0 20px 20px;
+                border-top: 1px solid var(--line);
+            }
+            .week-card.open .week-body {
+                display: block;
+            }
+
+            .daily-strip {
+                margin-top: 14px;
+                margin-bottom: 10px;
+                padding: 8px 12px;
+                background: var(--bg-3);
+                border-radius: var(--radius);
+                font-size: .85rem;
+                color: var(--ink-dim);
+                font-family: var(--mono);
+                border-left: 3px solid var(--rust);
+                line-height: 1.55;
+            }
+            .daily-label {
+                color: var(--rust-bright);
+                font-weight: 700;
+            }
+
+            .schedule-info {
+                margin-bottom: 10px;
+                padding: 7px 12px;
+                background: var(--bg-3);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                font-size: .8rem;
+                color: var(--ink-faint);
+                font-family: var(--mono);
+                line-height: 1.55;
+            }
+            .schedule-info span { color: var(--patina); }
+
+            .tasks-label {
+                font-size: .68rem;
+                color: var(--rust);
+                letter-spacing: .14em;
+                text-transform: uppercase;
+                font-weight: 700;
+                font-family: var(--mono);
+                margin: 12px 0 4px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .tasks-label::after {
+                content: "";
+                height: 1px;
+                flex: 1;
+                background: var(--line);
+            }
+            .tasks-label.leet { color: var(--patina); }
+            .tasks-label.github { color: var(--rust-bright); }
+            .tasks-label.mock { color: var(--copper); }
+            .tasks-label.apply { color: var(--patina); }
+
+            .task-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 6px 7px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background .12s;
+                line-height: 1.5;
+            }
+            .task-row:hover { background: var(--bg-3); }
+            .task-row.learn {
+                border-left: 3px solid var(--patina);
+                padding-left: 8px;
+            }
+            .task-row.warm {
+                border-left: 3px solid var(--copper);
+                padding-left: 8px;
+            }
+            .task-row.apply {
+                border-left: 3px solid var(--rust);
+                padding-left: 8px;
+            }
+            .task-row.saturday {
+                border-left: 3px solid var(--rust-deep);
+                padding-left: 8px;
+            }
+
+            .task-checkbox {
+                width: 17px;
+                height: 17px;
+                min-width: 17px;
+                border-radius: 4px;
+                border: 1.5px solid var(--line-2);
+                background: var(--bg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-top: 3px;
+                transition: all 0.15s;
+                flex-shrink: 0;
+                position: relative;
+                cursor: pointer;
+            }
+            .task-row:hover .task-checkbox {
+                border-color: var(--rust);
+            }
+            /* State 1 — in progress */
+            .task-checkbox.in-progress {
+                background: rgba(210,98,46,.18);
+                border-color: var(--rust);
+            }
+            .task-checkbox.in-progress::after {
+                content: "";
+                display: block;
+                width: 8px;
+                height: 2px;
+                background: var(--rust-bright);
+                border-radius: 2px;
+            }
+            /* State 2 — done */
+            .task-checkbox.done-check {
+                background: var(--rust);
+                border-color: var(--rust);
+            }
+            .task-checkbox.done-check::after {
+                content: "";
+                position: absolute;
+                left: 4px; top: 1.5px;
+                width: 5px; height: 9px;
+                border: solid var(--bg);
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+            /* State 3 — shaky */
+            .task-checkbox.shaky {
+                background: rgba(201,138,75,.18);
+                border-color: var(--copper);
+            }
+            .task-checkbox.shaky::after {
+                content: "?";
+                font-size: 11px;
+                font-weight: 900;
+                color: var(--copper);
+                font-family: var(--mono);
+                line-height: 1;
+            }
+            .task-text {
+                font-size: .92rem;
+                color: var(--ink);
+                line-height: 1.5;
+            }
+            .task-row.in-progress-row .task-text {
+                color: var(--rust-bright);
+            }
+            .task-row.done .task-text {
+                color: var(--ink-faint);
+                text-decoration: line-through;
+                text-decoration-color: var(--rust-deep);
+            }
+            .task-row.shaky-row {
+                border-left: 3px solid var(--copper) !important;
+                padding-left: 8px;
+            }
+            .task-row.shaky-row .task-text {
+                color: var(--copper);
+            }
+
+            .resources-wrap {
+                margin-top: 16px;
+            }
+            .resources-label {
+                font-size: .68rem;
+                color: var(--ink-faint);
+                letter-spacing: .14em;
+                text-transform: uppercase;
+                font-weight: 700;
+                font-family: var(--mono);
+                margin-bottom: 7px;
+            }
+            .resources-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .resource-chip {
+                font-size: .78rem;
+                padding: 4px 12px;
+                background: var(--bg-3);
+                border: 1px solid var(--line-2);
+                border-radius: 20px;
+                color: var(--ink-dim);
+                font-family: var(--mono);
+                transition: .15s;
+            }
+            .resource-chip:hover {
+                color: var(--patina);
+                border-color: var(--patina-deep);
+                background: var(--bg-raised);
+            }
+
+            /* hidden phases */
+            .phase-section { display: none; }
+            .phase-section.active { display: block; }
+
+            /* ── SHAKY PANEL ── */
+            .shaky-week-group {
+                margin-bottom: 10px;
+                border: 1px solid rgba(201,138,75,.25);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .shaky-week-label {
+                padding: 9px 16px;
+                background: rgba(201,138,75,.07);
+                font-family: var(--mono);
+                font-size: .72rem;
+                font-weight: 700;
+                letter-spacing: .12em;
+                text-transform: uppercase;
+                color: var(--copper);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .shaky-week-label .shaky-count {
+                font-size: .68rem;
+                padding: 1px 8px;
+                border-radius: 10px;
+                background: rgba(201,138,75,.12);
+                border: 1px solid rgba(201,138,75,.28);
+                color: var(--copper);
+                letter-spacing: .04em;
+            }
+            .shaky-task-entry {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 9px 16px;
+                border-top: 1px solid var(--line);
+                cursor: pointer;
+                transition: background 0.12s;
+            }
+            .shaky-task-entry:hover { background: rgba(201,138,75,.05); }
+            .shaky-task-entry .shaky-dot {
+                width: 7px; height: 7px;
+                min-width: 7px;
+                border-radius: 50%;
+                background: var(--copper);
+                flex-shrink: 0;
+            }
+            .shaky-task-entry .shaky-task-text {
+                font-size: .88rem;
+                color: var(--ink-dim);
+                line-height: 1.4;
+                flex: 1;
+            }
+            .shaky-task-entry .shaky-goto {
+                font-size: .68rem;
+                font-family: var(--mono);
+                color: var(--ink-faint);
+                flex-shrink: 0;
+                transition: color 0.15s;
+                letter-spacing: .06em;
+            }
+            .shaky-task-entry:hover .shaky-goto { color: var(--copper); }
+            .shaky-summary-bar {
+                display: flex;
+                gap: 20px;
+                padding: 12px 16px;
+                margin-bottom: 16px;
+                background: var(--bg-2);
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-family: var(--mono);
+                font-size: .78rem;
+                color: var(--ink-faint);
+                flex-wrap: wrap;
+            }
+            .shaky-summary-bar .s-stat {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .shaky-summary-bar .s-val {
+                font-size: 1.4rem;
+                font-weight: 700;
+                color: var(--copper);
+                line-height: 1;
+                font-family: var(--mono-display);
+            }
+            .shaky-summary-bar .s-lbl {
+                font-size: .68rem;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                color: var(--ink-faint);
+            }
+
+            @keyframes spin { to { transform: rotate(360deg); } }
+
+            /* ── RESPONSIVE ── */
+            @media (max-width: 600px) {
+                .header-title { font-size: .85rem; }
+                .week-title { font-size: .92rem; }
+                .schedule-strip { flex-direction: column; gap: 3px; }
+                .header-progress-wrap { width: 100%; }
+                .header-track { width: 100px; }
+            }
+
+            /* ── INTERVIEW-ANGLE TASKS ── */
+            .task-row.interview { border-left: 3px solid #e0b341; padding-left: 8px; }
+            .tasks-label.interview { color: #e0b341; }
+        </style>
+    </head>
+    <body>
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-inner">
+                <div class="header-top">
+                    <div>
+                        <div class="header-label">RUST × IMAGE PROCESSING · 8 WEEKS</div>
+                        <div class="header-title">Pixels in Rust</div>
+                        <div class="header-sub">COLOR · FILTERS · RESAMPLING · CODECS · PIPELINES · WASM</div>
+                    </div>
+                    <div class="header-progress-wrap">
+                        <div class="header-buildbar">
+                            <span class="label">Progress</span>
+                            <div class="progress-bar-wrap">
+                                <div class="progress-bar-fill" id="totalBar" style="width:0%"></div>
+                            </div>
+                            <span class="header-pct" id="totalPct">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="schedule-strip">
+                    <div>Mon–Fri <span>2–3 hrs/day</span></div>
+                    <div>Saturday <span>3–4 hrs (project)</span></div>
+                    <div>Sunday <span>Rest (Sabbath)</span></div>
+                    <div>Weekly total <span>~13–19 hrs</span></div>
+                </div>
+
+                <div class="phase-tabs">
+                    <button class="phase-tab active" style="--phase-color: #f0813f" onclick="showPhase(0, this)">P1 · Rust Through Pixels</button>
+                    <button class="phase-tab" style="--phase-color: #4fb0a0" onclick="showPhase(1, this)">P2 · Pipelines &amp; Services</button>
+                    <button class="phase-tab" style="--phase-color: #d2622e" onclick="showPhase(2, this)">P3 · Codecs, WASM &amp; Perf</button>
+                    <button class="phase-tab" id="shaky-tab-btn" style="--phase-color: #c98a4b" onclick="showPhase('shaky', this)">⚠ Shaky Concepts</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+            <div class="timeline-banner">
+                ⚡
+                <div>
+                    Same eight weeks, same schedule — but the vehicle is now an
+                    <strong>image processing library you build from scratch</strong>.
+                    Every week teaches one Rust idea and one imaging idea, and they're
+                    paired on purpose: ownership through pixel buffers, traits through a
+                    filter pipeline, iterators through convolution, threads through tiling,
+                    async through a transform service, and unsafe/SIMD through the hot loop.
+                    By Week 6 you've written a <strong>JPEG encoder</strong>; by Week 8 you've
+                    shipped a browser editor and a Python-callable native module. Every week
+                    still ends with a portfolio project.
+                </div>
+            </div>
+
+            <div class="schedule-info" style="margin-bottom: 12px">
+                <span>WHAT ACTUALLY TRANSFERS: </span>Netflix and Airbnb will not interview
+                you in Rust — your coding rounds stay Python. What carries over is the domain:
+                color and gamma, sampling and aliasing, compression tradeoffs, and the design of a
+                transform-and-deliver pipeline. That's the substance of Airbnb's listing-photo
+                infrastructure and Netflix's encoding and artwork work, and it gives you specific
+                things to say in system design and behavioral rounds instead of generalities.
+                The 🎯 tasks are the ones that transfer directly — Rust is the vehicle that forces
+                you to build the thing by hand instead of importing it.
+            </div>
+
+            <div class="schedule-info" style="margin-bottom: 20px">
+                <span>HOW TO USE: </span>Click any task to cycle its state — ○
+                not started → ◐ in progress → ✓ done → ? shaky (done but not
+                confident). Shaky items collect in the ⚠ tab to revisit. Task
+                types: <span>📗 LEARN</span> (read/study) ·
+                <span>🔥 DRILL</span> (exercises) · <span>🔒 BUILD</span> (write
+                code) · <span>🎯 INTERVIEW</span> (the transferable bit) ·
+                <span>Saturday</span> (project block).
+            </div>
+
+            <!-- ═══════════ PHASE 1 ═══════════ -->
+            <div class="phase-section active" id="phase-0" style="--phase-color: #f0813f">
+                <div class="phase-header" style="border-left: 3px solid #f0813f">
+                    <div class="phase-header-title" style="color: #f0813f">Phase 1: Rust Through Pixels</div>
+                    <div class="phase-header-sub">Week 0 (soft start) + Weeks 1–3 · The language and the borrow checker, learned by building an image library</div>
+                </div>
+
+                <div class="week-card" id="wc-0">
+                    <button class="week-header" onclick="toggleWeek(0)">
+                        <div class="week-badge" style="color:#4fb0a0;background:rgba(79,176,160,.12);border-color:rgba(79,176,160,.28);">WK 0</div>
+                        <div class="week-meta">
+                            <div class="week-title">Soft Start — Toolchain + Your First Pixels</div>
+                            <div class="week-focus">Setup · first Rust · write an image file by hand · ~4–6 hrs · no pressure</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-0">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">GOAL: Get the toolchain working and write a real image file with zero dependencies. No timer.</div>
+                        <div class="schedule-info">You already program well — <span>Rust's syntax will feel familiar; only ownership is new.</span> Use Week 0 to set up and to get the idea of what an image actually is into your hands.</div>
+                        <div class="tasks-label">SETUP (1 HR)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Install the toolchain via rustup (rustup.rs) — gives rustc, cargo, and std. Verify with `rustc --version` (you want 1.85+ for the 2024 edition). Run `rustup component add clippy`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Wire up Zed for Rust: rust-analyzer ships built in. Turn ON inlay type hints and format-on-save — seeing inferred types everywhere is a huge aid while ownership is still new. Your vim keymap carries over untouched.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Create a PUBLIC GitHub repo "pixlab" — this is your portfolio repo, not a scratch pad. README: "An image processing library written from scratch in Rust — filters, resampling, a toy JPEG encoder, a serving pipeline, and a browser editor."</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">`cargo new pixlab &amp;&amp; cd pixlab &amp;&amp; cargo run`. Open Cargo.toml — note `edition = "2024"`. This is your project manifest (like pyproject/package.json).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Bookmark what you'll live in: the Book (Brown interactive edition, rust-book.cs.brown.edu), Rustlings, the std docs, and docs.rs/image — you'll read the image crate's source as often as you use it.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — FIRST TASTE (1–2 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 1–3 (setup, guessing game, common concepts). The guessing game is a fast tour of match, Result, crates, and shadowing.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: `cargo install rustlings`, then `rustlings init`. Do the intro + variables sections.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Write down the mental model you'll use for eight weeks — an image is a width, a height, a pixel format, and ONE flat buffer in row-major order. The byte offset of channel c at (x, y) is `y*stride + x*channels + c`, and stride ≥ width*channels because rows are often padded for alignment. Almost every image bug you will ever write is a stride bug.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — OWNERSHIP + FIRST IMAGE (1–2 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 4 (Ownership) — slowly. Move semantics, borrowing, slices. This is THE chapter and the only genuinely new idea coming from Python. Don't rush it.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Write a PPM (P6) file with NO crates — a 256×256 RGB gradient. Header is literally `P6\n{w} {h}\n255\n` followed by raw RGB bytes. Open the result in Preview/GIMP/ffplay. You just wrote an image format. Push it.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">rustup.rs</span><span class="resource-chip">rust-book.cs.brown.edu</span><span class="resource-chip">rustlings</span><span class="resource-chip">netpbm P6 spec</span><span class="resource-chip">docs.rs/image</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="week-card" id="wc-1">
+                    <button class="week-header" onclick="toggleWeek(1)">
+                        <div class="week-badge">WK 1</div>
+                        <div class="week-meta">
+                            <div class="week-title">Ownership &amp; Borrowing, Applied to Pixel Buffers</div>
+                            <div class="week-focus">The borrow checker · your Image type · color and the gamma trap · ~13 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-1">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">THE MAKE-OR-BREAK WEEK: everything else depends on ownership, so you learn it inside a real Image struct rather than in toy exercises. Expect to fight the compiler — that's the learning.</div>
+                        <div class="tasks-label">MONDAY — OWNERSHIP DEEP (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Re-read Book Ch. 4 and take the Brown edition quizzes — they're built to catch the exact misconceptions beginners have. Make move vs copy vs clone crystal clear.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `move_semantics` (all exercises).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `struct Image { data: Vec&lt;u8&gt;, width: u32, height: u32, format: PixelFormat }`. Write `new(w, h, fmt)` (zero-filled) and `from_raw(...) -&gt; Result&lt;Image, _&gt;` that validates `data.len()` against the expected size. Notice the API question this forces: a filter taking `self` consumes the image, one taking `&amp;mut self` mutates in place, one taking `&amp;self` allocates a new one. That choice IS your library design.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Start a "Rust" Anki deck. First cards: when does a value move vs copy? what is a borrow? why can't a `&amp;mut` coexist with a shared `&amp;`?</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — REFERENCES &amp; SLICES (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 4.2–4.3 (references, slices). Internalize the aliasing rule: one `&amp;mut` XOR many `&amp;`. This single rule is why Rust prevents data races — and in Week 4 it's what lets you hand out disjoint image tiles to threads with no locks at all.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `primitive_types`, `vecs`, `strings` — these force the `&amp;str` vs `String` distinction, the #1 early friction point.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Row access built on slices: `fn row(&amp;self, y: u32) -&gt; &amp;[u8]` and `row_mut`, both implemented over `chunks_exact(self.stride())`. Then `pixel(x, y) -&gt; &amp;[u8]`. Rule for the whole sprint: take `&amp;[u8]`, never `Vec&lt;u8&gt;`, in a signature that only reads.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — STRUCTS, ENUMS &amp; MATCH (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 5–6 (structs, methods, enums, match, Option). Coming from Python, `Option&lt;T&gt;` replacing null is the key shift — the compiler forces you to handle "nothing".</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `structs`, `enums`, `options`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `enum PixelFormat { Gray8, GrayAlpha8, Rgb8, Rgba8, Rgb16 }` with `channels()`, `bytes_per_channel()`, and `has_alpha()` dispatched by match. Add `enum ColorSpace { Srgb, LinearRgb }` — Friday explains why you need it, and why libraries that omit it produce subtly wrong output forever.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — LIFETIMES VIA IMAGE VIEWS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 10.3. Lifetimes are NOT about how long values live — they're labels relating references so the compiler can prove nothing dangles. Then watch Jon Gjengset's "Crust of Rust: Lifetime Annotations", the best explanation anywhere.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `lifetimes`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `struct View&lt;'a&gt; { data: &amp;'a [u8], x: u32, y: u32, w: u32, h: u32, stride: usize }` — a borrowed sub-image, i.e. a crop with no copy — plus a `rows()` iterator over it. This is exactly how real libraries expose a region of interest, and it's the most natural lifetime exercise you will find.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — COLOR, LUMA &amp; THE GAMMA TRAP (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: RGB → grayscale is not the average of three channels. Rec.601 luma is 0.299R + 0.587G + 0.114B; Rec.709 (HD, matching sRGB primaries) is 0.2126R + 0.7152G + 0.0722B. Green dominates because your eye does.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Now the trap. sRGB byte values are gamma-encoded (roughly a 2.2 power curve), so they are NOT proportional to light. Averaging, blurring, resizing, or alpha-compositing them directly is mathematically wrong. The correct sequence is always: decode to linear → do the math → re-encode to sRGB.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Write `to_gray()` twice — naive (weights applied to raw sRGB bytes) and correct (linearize, weight, re-encode). Save both and diff them. The naive version is visibly darker through the midtones. Keep both in the repo; that diff image is a better interview answer than any explanation.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Anki — "why aren't the luma weights equal?", "what does gamma encoding buy you at 8 bits per channel?", "name three operations that are wrong when performed in sRGB space" (resize, blur, alpha compositing).</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: PIXLAB CORE (3 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — a working `pixlab` library plus CLI. Use the `image` crate to DECODE PNG/JPEG only; everything after decode you write yourself over your own `Image` type: grayscale (both variants), invert, brightness/contrast, and threshold. README with before/after images and a note on the gamma difference. Every week from here builds on this crate.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">Book Ch 4–6, 10.3</span><span class="resource-chip">Crust of Rust (YouTube)</span><span class="resource-chip">rustlings</span><span class="resource-chip">docs.rs/image</span><span class="resource-chip">Novak: "What every coder should know about gamma"</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="week-card" id="wc-2">
+                    <button class="week-header" onclick="toggleWeek(2)">
+                        <div class="week-badge">WK 2</div>
+                        <div class="week-meta">
+                            <div class="week-title">Traits, Generics &amp; Errors + Convolution From Scratch</div>
+                            <div class="week-focus">A filter abstraction + the kernel math · ~15 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-2">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">THE CONVOLUTION WEEK: traits give you a composable filter pipeline, and convolution gives you blur, sharpen, and edge detection out of a single loop — plus the cleanest complexity story in the whole plan.</div>
+                        <div class="tasks-label">MONDAY — GENERICS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 10.1 (generics + monomorphization). Generic functions, structs, enums, and the zero-cost story — generics compile to specialized code.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `generics`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Make the buffer generic over sample type: `Image&lt;T&gt;` for `T: Copy + Default`, so u8, u16, and f32 images share one implementation. f32 matters more than it looks — intermediate filter results want float precision, and HDR/16-bit sources are common. Notice exactly where you now need trait bounds you didn't need before.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — TRAITS &amp; DISPATCH (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 10.2 + Ch. 17. Traits are interfaces. Trait bounds, `impl Trait`, and `dyn Trait` (dynamic dispatch) vs generics (static dispatch). Meet the core derives: Debug, Clone, PartialEq, Eq, Hash, Default.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `traits`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `trait Filter { fn name(&amp;self) -&gt; &amp;str; fn apply(&amp;self, src: &amp;Image) -&gt; Result&lt;Image, ImageError&gt;; }`, then `struct Pipeline { stages: Vec&lt;Box&lt;dyn Filter&gt;&gt; }` that runs them in order. Dynamic dispatch is genuinely the right call here — the stage list is assembled from CLI arguments at runtime, so you can't monomorphize it.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Anki — "static vs dynamic dispatch, when does the vtable cost actually matter?", "when does monomorphization blow up compile time and binary size?" You now have a real example of each in one codebase.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — ERROR HANDLING (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 9 (Result, the `?` operator, panic vs recoverable). Then the ecosystem standard: `thiserror` for libraries (derive your error enum) and `anyhow` for applications. This is how real Rust handles errors — no exceptions.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `error_handling`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `enum ImageError { DimensionMismatch{..}, UnsupportedFormat(..), KernelNotOdd(..), Io(#[from] std::io::Error) }` via thiserror, propagated with `?`. Hard rule: the library never panics, only `main` does. Image inputs are hostile — truncated files, absurd dimensions, wrong channel counts — and that's exactly the code an interviewer will poke at.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — CONVOLUTION, PART 1 (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: A kernel is a small weight matrix slid over the image; each output pixel is a weighted sum of its neighborhood. Box blur, Gaussian blur, sharpen (identity plus an edge term), and Sobel Gx/Gy for gradients are all the same loop with different weights. Two things break naive implementations: normalization (weights must sum to 1 or you shift overall brightness) and border handling (clamp / reflect / wrap / crop — pick one, document it, be consistent).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `fn convolve(src: &amp;Image, kernel: &amp;[f32], k: usize, border: Border) -&gt; Image` — the naive O(w·h·k²) version. Get Gaussian blur working, then Sobel edge magnitude as `sqrt(gx² + gy²)`.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — CONVOLUTION, PART 2: SEPARABILITY (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: A 2D Gaussian is the outer product of two 1D Gaussians, so one horizontal pass followed by one vertical pass gives an identical result in O(w·h·2k) instead of O(w·h·k²). At radius 15 that's roughly a 7.5× cut in multiplies for free. Box blur goes further: a sliding running sum makes it O(1) per pixel regardless of radius, and three box passes approximate a Gaussian closely — which is what most "fast blur" implementations in the wild actually are.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Implement the separable Gaussian and the running-sum box blur. Assert the separable output matches the naive output within float epsilon — that test is the whole point.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: This is a sliding-window problem, the same pattern you've been drilling on LeetCode, in two dimensions. Practice deriving O(k²) → O(2k) → O(1) out loud at a whiteboard, and be able to say which technique buys which.</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: FILTER LIBRARY + BENCHMARKS (3–4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — finish the filter set (blur, sharpen, Sobel, emboss, median) behind the `Filter` trait, wire the CLI to compose them (`pixlab in.jpg -f blur:5 -f sobel out.png`), and benchmark naive vs separable vs running-sum with `criterion` on a 4K image. README with the complexity table and the real numbers next to it. A genuine portfolio centerpiece.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">Book Ch 9, 10, 17</span><span class="resource-chip">thiserror + anyhow</span><span class="resource-chip">docs.rs/criterion</span><span class="resource-chip">Kutskir: "Fastest Gaussian blur"</span><span class="resource-chip">crates.io</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="week-card" id="wc-3">
+                    <button class="week-header" onclick="toggleWeek(3)">
+                        <div class="week-badge">WK 3</div>
+                        <div class="week-meta">
+                            <div class="week-title">Iterators, Modules &amp; Tooling + Resampling Done Right</div>
+                            <div class="week-focus">Idiomatic Rust + the resize question everyone gets wrong · ~16 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-3">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">READING-FLUENCY WEEK AND THE RESIZE WEEK: iterators are how idiomatic Rust is written, and resampling is the image topic most likely to come up in a real product interview.</div>
+                        <div class="tasks-label">MONDAY — CLOSURES &amp; ITERATORS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 13. Fn/FnMut/FnOnce, the Iterator trait, map/filter/fold/collect. Iterators are lazy and `collect()` is type-driven — that part is new versus Python comprehensions, but it clicks fast.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `iterators` (all — they're meaty and worth it).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Rewrite your per-pixel filters as iterator chains over `chunks_exact(channels)` and `zip`. Then benchmark against the indexed-loop version: `chunks_exact` gives the optimizer a known-length slice, so bounds checks frequently vanish in a way indexed access can't guarantee. That's a measurable performance reason to write idiomatic Rust, not just an aesthetic one.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — SMART POINTERS &amp; COW (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 15 (Box, Rc, RefCell, Deref, Drop). When you need heap allocation (Box), shared ownership (Rc), or interior mutability (RefCell) — and why `Rc&lt;RefCell&lt;T&gt;&gt;` exists.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `smart_pointers`, `box`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Use `Cow&lt;'_, [u8]&gt;` for a stage that may return its input untouched — a resize whose target dimensions already match, or a format conversion that's a no-op. You skip the copy without changing the signature. Images are big; a needless clone of a 4K RGBA buffer is 33 MB.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Anki — "Box vs Rc vs RefCell vs Cow, what does each buy you?", "what is interior mutability and when is it a smell?"</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — MODULES, CRATES, WORKSPACES (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 7 (modules, paths, pub, use) + Ch. 14 (Cargo, workspaces, publishing).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Split into a Cargo workspace: `pixlab-core` (pure buffer math, no I/O, no CLI, minimal dependencies), `pixlab-cli`, and stubs for `pixlab-server` and `pixlab-wasm`. Keeping core dependency-free is not architecture theater — it's the reason your WASM binary in Week 7 will be small. Add `///` doc comments and run `cargo doc --open`.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — RESAMPLING: THE REAL ONE (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Upscaling and downscaling are different problems. Upscaling is interpolation — nearest (blocky), bilinear (soft), bicubic (sharper, can ring), Lanczos (sharpest, rings most). Downscaling is a sampling problem: you MUST low-pass filter first, because by Nyquist any detail above half the new sampling rate folds back as moiré and crawling edges. Taking every Nth pixel is the classic bug. Area averaging, or a Lanczos window scaled to the destination, fixes it.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: And resample in linear light, not in sRGB — the same gamma trap from Week 1. Downscaling gamma-encoded values darkens the result, most visibly on fine high-contrast detail. This is why a naive thumbnail generator makes everything look muddy.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: 2–3 LeetCode mediums in Rust to keep the language in your hands. Rotate Image is a good one this week — an in-place transpose plus row reversal is literally an image operation.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Implement nearest, bilinear, and area-average downscale. Downscale a fine checkerboard 8× with each and look at the moiré. Then do it again in linear light and compare.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — TESTING, CLIPPY, FMT, CI (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 11 (unit tests, integration tests in tests/, #[cfg(test)]). Then run `cargo clippy -- -D warnings` on everything and fix every lint — clippy is the best Rust teacher you have. Finish with `cargo fmt`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Golden-image tests — compare output against committed reference PNGs with a tolerance, since float math differs across platforms and exact equality will flake. Add GitHub Actions running test, clippy, and fmt --check. A green badge signals professionalism.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Implement PSNR — 10·log10(MAX²/MSE) — as a test helper. You now have a number to answer "did that optimization hurt quality?", and you'll extend it to SSIM in Week 6. Being able to quantify a quality regression is the difference between an opinion and an argument.</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: RESIZE + QUALITY REPORT (3–4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — `pixlab resize` supporting nearest / bilinear / bicubic / Lanczos / area, with a `--linear` flag for gamma-correct resampling. Then generate a comparison contact sheet: one source image downscaled 8× through every filter, sRGB versus linear, with PSNR against a high-quality reference. Put the grid in the README. That single artifact answers "do you actually understand resampling?" before you say a word.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">Book Ch 7, 11–15</span><span class="resource-chip">docs.rs/fast_image_resize</span><span class="resource-chip">Brasseur: "Gamma error in picture scaling"</span><span class="resource-chip">ImageMagick resize docs</span><span class="resource-chip">leetcode.com</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /phase 1 -->
+
+            <!-- ═══════════ PHASE 2 ═══════════ -->
+            <div class="phase-section" id="phase-1" style="--phase-color: #4fb0a0">
+                <div class="phase-header" style="border-left: 3px solid #4fb0a0">
+                    <div class="phase-header-title" style="color: #4fb0a0">Phase 2: Pipelines &amp; Services</div>
+                    <div class="phase-header-sub">Weeks 4–5 · Parallel batch processing and a deployed image transform service · the Netflix/Airbnb-shaped work</div>
+                </div>
+
+                <div class="week-card" id="wc-4">
+                    <button class="week-header" onclick="toggleWeek(4)">
+                        <div class="week-badge">WK 4</div>
+                        <div class="week-meta">
+                            <div class="week-title">Concurrency: Throughput Over a Batch of Images</div>
+                            <div class="week-focus">Threads, rayon, tokio · CPU-bound vs IO-bound · ~16 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-4">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">THE THROUGHPUT WEEK: image work is the textbook case of embarrassingly parallel CPU-bound work — and the textbook case of people putting that work on the wrong runtime.</div>
+                        <div class="tasks-label">MONDAY — THREADS &amp; SHARED STATE (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 16. Threads, `move` closures, channels (mpsc), and Arc + Mutex for shared state. The Send and Sync marker traits are WHY the borrow checker turns data races into compile errors.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Rustlings `threads`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Tile-parallel filtering by hand — split the output buffer with `chunks_mut(rows_per_tile * stride)` and hand each chunk to a scoped thread (`std::thread::scope`). No Mutex, no Arc, no locking: the borrow checker proves the tiles are disjoint. This is the Week 1 aliasing rule paying rent, and it's a great thing to be able to explain.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — RAYON &amp; SCALING LIMITS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: rayon — work-stealing data parallelism where swapping `iter()` for `par_iter()` is often the entire change. Learn `par_chunks_mut` for image tiles.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Parallelize your convolution with rayon and measure at 1, 2, 4, and 8 threads on a 4K image. Plot the speedup curve.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Explain your own curve with Amdahl's law — and know why it flattens earlier than core count suggests. For a blur you're usually memory-bandwidth bound, not compute bound: the kernel reads far more bytes than it does arithmetic. "We added cores and it didn't get faster" is a real production story, and this is the reason.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Read Ch. 1–2 of Mara Bos's "Rust Atomics and Locks" (free at marabos.nl/atomics) — the clearest account of Send/Sync, Arc, and Mutex internals anywhere.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — ASYNC CONCEPTS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Book Ch. 17 (async/await) + the async book intro. The model: an `async fn` returns a Future, Futures are LAZY (nothing happens until polled), and you need a runtime to drive them. Concurrency without necessarily any parallelism.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔥 DRILL: Watch Jon Gjengset's "Crust of Rust: async/await" for the underlying mental model — poll, wakers, the generated state machine.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: The rule worth memorizing: never run a CPU-bound image transform directly on an async task. It occupies an executor thread for its whole duration and stalls every unrelated request sharing that thread. Use `tokio::task::spawn_blocking` or hand the work to a rayon pool. Be able to describe the SYMPTOM — latency spikes on endpoints that have nothing to do with images — not just the fix. That's the version of this answer that sounds like experience.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — TOKIO (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Work through the official tokio tutorial (tokio.rs/tokio/tutorial) — Hello Tokio, Spawning, Shared State, Channels. tokio is THE async runtime. Learn `#[tokio::main]`, `tokio::spawn`, `.await`, and `tokio::select!`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Fetch 50 image URLs concurrently with `reqwest`, decode each on a blocking pool, and report total wall time against a sequential baseline. Watch where the time actually goes — it's usually decode, not network.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — BACKPRESSURE &amp; BOUNDED CONCURRENCY (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Unbounded concurrency is a memory bug waiting to happen — fifty simultaneous 8K decodes will OOM a small box, because a decoded 8K RGBA frame is ~130 MB before you've done anything to it. Bound it with `tokio::sync::Semaphore`, bounded `mpsc` channels, or `buffer_unordered(n)` over a stream. Gotcha: holding a `std::sync::Mutex` across an `.await` is a bug — learn exactly why.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Add a semaphore capping concurrent decodes, then throw a burst at it and show the memory ceiling holding flat. Anki — "why are futures lazy?", "std Mutex vs tokio Mutex, when each?", "what does backpressure actually mean?"</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: BATCH THUMBNAIL PIPELINE (3–4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — a CLI that walks a directory and produces derivatives (320 / 640 / 1280 wide, WebP and JPEG) with a bounded worker pool, a progress bar (`indicatif`), per-file error isolation so one corrupt input can't kill the run, and a summary report: files processed, bytes in and out, wall time, throughput. Benchmark it against ImageMagick's `mogrify` on the same set and put the numbers in the README. This is the exact shape of an internal media tool at any company with photos.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">Book Ch 16–17</span><span class="resource-chip">docs.rs/rayon</span><span class="resource-chip">marabos.nl/atomics</span><span class="resource-chip">tokio.rs/tokio/tutorial</span><span class="resource-chip">docs.rs/indicatif</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="week-card" id="wc-5">
+                    <button class="week-header" onclick="toggleWeek(5)">
+                        <div class="week-badge">WK 5</div>
+                        <div class="week-meta">
+                            <div class="week-title">The Image Service — Transform, Cache, Deliver</div>
+                            <div class="week-focus">axum + storage + caching → deployed · the system design you'll be asked about · ~18 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-5">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">THE INTERVIEW WEEK: Airbnb serves listing photos, Netflix serves artwork; both run an image transform-and-delivery pipeline. Build an honest small version and you can answer the design question from experience instead of from a blog post.</div>
+                        <div class="tasks-label">MONDAY — AXUM &amp; THE TRANSFORM URL (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: axum — the standard modern web framework, built on tokio + hyper + tower. Routers, handlers, and extractors (Path, Query, Json, State).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: `GET /i/:id?w=&amp;h=&amp;fit=cover|contain&amp;fmt=auto|webp|jpeg&amp;q=` serving a transformed image. Keep everything in memory for now; the transform code is already written from Weeks 2–3.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Why you must whitelist dimensions or sign the URL. An open resize endpoint is free CPU exhaustion: every distinct `?w=` value is a guaranteed cache miss plus a full decode, so an attacker walks w=1..2000 and buries your origin. Real services either allow a fixed set of widths or HMAC-sign the parameters. This is the security question inside the design question, and volunteering it lands well.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — SERDE &amp; PARAM NORMALIZATION (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: serde + serde_json — THE serialization framework. `#[derive(Serialize, Deserialize)]`, and how axum's `Json&lt;T&gt;` extractor uses it.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: A `Transform` struct that parses, validates, and NORMALIZES params into a canonical form — clamp dimensions to the allowed set, resolve `fmt=auto` against the Accept header, drop defaults, fix parameter order. That canonical form is your cache key. If `?w=640` and `?width=640&amp;h=` produce different keys, your hit rate quietly halves and nobody notices for a year.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — CACHING &amp; OBSERVABILITY (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: The cache hierarchy — CDN edge, then your derivative cache, then origin. `Cache-Control: public, max-age=31536000, immutable` for content-addressed derivative URLs; ETag and 304 for everything else. `Vary: Accept` is required when you content-negotiate format, and it fragments the edge cache — that tradeoff is worth being able to discuss. Then structured logging with `tracing` + `tracing-subscriber`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: An on-disk (or `moka` in-memory) derivative cache keyed by the canonical transform, correct cache headers, and tracing spans that time decode, transform, and encode SEPARATELY. Log hit/miss ratio. Knowing which of the three dominates is the difference between guessing and optimizing.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — STORAGE &amp; METADATA (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Originals live in object storage and are never mutated; derivatives are disposable and regenerable, which is what makes aggressive caching safe. Metadata — dimensions, format, EXIF orientation, dominant color, a placeholder hash — lives in a database. `sqlx` gives you async, compile-time-checked SQL against the real schema (no ORM magic).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: SQLite via sqlx with migrations: an `images` table (id, storage_key, width, height, format, bytes, created_at). Populate on upload, serve it at `GET /i/:id/meta`. Add a blurhash/thumbhash placeholder — that's how both companies avoid layout shift while a photo loads, and it's a nice detail to have implemented.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: EXIF orientation deserves its own card. A JPEG can be stored rotated with a flag saying "display me rotated", so if you strip metadata during processing without applying it first, every photo from certain phones comes out sideways. It is the single most common image-pipeline bug in production.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — SYSTEM DESIGN WRITE-UP (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Read how the real ones work — Airbnb's and Netflix's engineering posts on their image and artwork pipelines, plus the architecture docs for imgix, Cloudinary, and Thumbor. Note the decisions that recur everywhere: pre-generate versus on-the-fly, where the CDN sits, how originals are protected, how format negotiation happens.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Write `docs/DESIGN.md` in your own repo answering the prompt end to end — upload → validate (dimension caps, format sniffing rather than trusting extensions, decompression-bomb limits) → store original → derivative strategy → CDN → invalidation → cost. State the tradeoff you'd defend: on-the-fly plus aggressive edge caching for the long tail of sizes, pre-generated for the handful of hot ones.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: Rehearse the design out loud in five minutes, then again in sixty seconds. Both lengths get asked, and the short one is harder.</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: DEPLOY IT (3–4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — config via env vars, a multi-stage Dockerfile producing a small final image, a `/health` endpoint, and a deploy to Fly.io / Shuttle / Railway so you have a LIVE URL. Add a tiny demo page using `&lt;img srcset&gt;` to hit your own service at multiple widths. README with an architecture diagram and the link. This is the project that gets you the interview.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">docs.rs/axum</span><span class="resource-chip">serde.rs</span><span class="resource-chip">docs.rs/sqlx</span><span class="resource-chip">docs.rs/tracing</span><span class="resource-chip">shuttle.rs</span><span class="resource-chip">Zero to Production in Rust</span><span class="resource-chip">thumbor / imgix docs</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /phase 2 -->
+
+            <!-- ═══════════ PHASE 3 ═══════════ -->
+            <div class="phase-section" id="phase-2" style="--phase-color: #d2622e">
+                <div class="phase-header" style="border-left: 3px solid #d2622e">
+                    <div class="phase-header-title" style="color: #d2622e">Phase 3: Codecs, WASM &amp; Performance</div>
+                    <div class="phase-header-sub">Weeks 6–8 · How compression actually works, Rust in the browser, the hot loop, and a capstone</div>
+                </div>
+
+                <div class="week-card" id="wc-6">
+                    <button class="week-header" onclick="toggleWeek(6)">
+                        <div class="week-badge">WK 6</div>
+                        <div class="week-meta">
+                            <div class="week-title">Compression — How JPEG Actually Works</div>
+                            <div class="week-focus">Color transforms, DCT, entropy coding, quality metrics · ~17 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-6">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">THE CODEC WEEK: this is the domain knowledge separating "I called the image library" from "I understand the format" — and it doubles as a serious data-structures workout.</div>
+                        <div class="tasks-label">MONDAY — COLOR SPACES &amp; CHROMA SUBSAMPLING (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: RGB → YCbCr separates luma (Y) from chroma (Cb, Cr). Human vision has far more luminance resolution than color resolution, so codecs discard chroma first: 4:4:4 keeps everything, 4:2:2 halves chroma horizontally, 4:2:0 halves it in both directions — a 50% data reduction before any other compression has happened. Also learn where color management lives: sRGB versus Display P3, ICC profiles, and what breaks when you strip one.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: RGB ↔ YCbCr conversion plus a 4:2:0 subsample/upsample round-trip. Measure the error on a photograph, then on a synthetic image with saturated red text on white. The failure mode — color fringing on hard chroma edges — becomes obvious immediately, and it's why screenshots of text look bad as JPEG.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — THE DCT (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: The 8×8 discrete cosine transform rewrites a block of pixels as a sum of cosine basis patterns — one DC term (the block average) plus 63 AC terms of rising frequency. The DCT itself is lossless and compresses nothing; what it does is concentrate energy into the top-left corner. Quantization — dividing by a table and rounding — is where the loss actually occurs, and the "quality" slider is nothing more than a scale factor applied to that table.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Implement the 8×8 DCT-II and its inverse. Round-trip a block and confirm you get it back within float error. Then quantize with the standard JPEG luma table at several quality levels and watch the high-frequency coefficients collapse to zero — that's compression happening in front of you.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — ENTROPY CODING (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: After quantization the block is mostly zeros. Zigzag ordering walks the block so those zeros end up contiguous at the tail, run-length encoding collapses the runs, and Huffman coding assigns short bit patterns to frequent symbols. Huffman construction is a greedy algorithm over a min-heap: repeatedly merge the two least-frequent nodes.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Huffman from scratch in Rust — `BinaryHeap` with `Reverse` for the min-heap, code assignment by tree walk, then encode and decode. Verify a round-trip on your quantized coefficients and report the compression ratio you achieved.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: This is a greedy + heap + tree problem you can now discuss with a real application attached, which is far stronger than reciting it from a DSA deck. Know the contrast too: JPEG uses Huffman, modern codecs use arithmetic or range coding (better ratio, more CPU), and PNG uses DEFLATE — LZ77 plus Huffman — after per-row prediction filters.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — MODERN FORMATS &amp; THE REAL TRADEOFF (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: What changed since 1992 — WebP (VP8 intra frames), AVIF (AV1 intra: much better at low bitrate, much slower to encode), JPEG XL (technically excellent, patchy support), and lossless PNG versus lossy everything. The engineering question is never "which format is best" but "which do I encode, at what CPU cost, for which client" — encode cost is paid once, bytes are paid on every single request, and support is negotiated per request through the Accept header.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: The Netflix-flavored version worth knowing — per-title and per-shot encoding. A fixed bitrate ladder wastes bits on simple content and starves complex content, so you derive the ladder per asset from a rate-distortion curve instead. The same logic applies to picking a per-image quality parameter rather than hardcoding q=85 everywhere, which is what almost everyone does.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — QUALITY METRICS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: PSNR is trivial to compute and correlates weakly with what people actually see. SSIM compares local luminance, contrast, and structure, and does noticeably better. VMAF is Netflix's own open-source metric — a model trained on human ratings that fuses several elementary metrics. All of them can be gamed by an encoder tuned against them, which is precisely why encoding teams still run human trials.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Implement SSIM (windowed, on the luma plane) alongside the PSNR you wrote in Week 3. Sweep JPEG quality from 30 to 95 across a test set and plot the rate-distortion curve — bytes on x, SSIM on y. Find the knee. That is how you would genuinely choose a default quality setting, and now you can say so with a graph.</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: TOY JPEG ENCODER (4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — assemble the week into a baseline JPEG encoder that produces a file your browser will open: RGB → YCbCr → 4:2:0 → 8×8 DCT → quantize → zigzag → RLE → Huffman → JFIF container. It only has to be correct, not fast and not optimal. README with the pipeline diagram, your rate-distortion curve, and a size/SSIM comparison against libjpeg at matched quality. Very few candidates anywhere have written one of these.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">ITU-T T.81 (JPEG spec)</span><span class="resource-chip">Computerphile: JPEG DCT videos</span><span class="resource-chip">docs.rs/zune-jpeg</span><span class="resource-chip">github.com/Netflix/vmaf</span><span class="resource-chip">Wang et al., SSIM paper</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="week-card" id="wc-7">
+                    <button class="week-header" onclick="toggleWeek(7)">
+                        <div class="week-badge">WK 7</div>
+                        <div class="week-meta">
+                            <div class="week-title">Rust in the Browser — A WASM Image Editor</div>
+                            <div class="week-focus">wasm-bindgen, canvas, the JS↔WASM boundary, SIMD · ~16 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-7">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">SHIP IT WHERE PEOPLE CAN SEE IT: a deployed browser editor running your own filter code is the most demo-able thing in this plan, and the boundary and performance work behind it is real systems engineering.</div>
+                        <div class="tasks-label">MONDAY — WASM FUNDAMENTALS (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: What WASM is and why Rust is a top choice for it (no GC → small, fast modules). Read the "Rust and WebAssembly" book intro. Install: `rustup target add wasm32-unknown-unknown`, then `wasm-pack`.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Hello WASM straight from `pixlab-core` — set `crate-type = ["cdylib"]`, export `grayscale(buf: &amp;mut [u8])` with `#[wasm_bindgen]`, build with `wasm-pack build --target web`, and call it from a bare index.html. Your Week 1 code is now running in a browser, unchanged.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — THE BOUNDARY (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: The wasm-bindgen guide. Crossing JS↔WASM costs real time: strings are re-encoded (UTF-8 ↔ UTF-16) and values are copied. For image data the fix is to stop crossing it — allocate the pixel buffer INSIDE WASM linear memory, hand JavaScript a `Uint8ClampedArray` view over that memory, and let JS read and write the view directly. Zero copies in either direction. Meet js-sys (JS builtins) and web-sys (DOM and Web APIs).</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Export an `Editor` struct holding the buffer, with `width()`, `height()`, `ptr()`, and methods that mutate in place. The footgun worth an Anki card: that JS view is INVALIDATED whenever WASM memory grows, so you must re-acquire it after any allocation or you'll be reading freed memory and seeing garbage pixels.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: "When is WASM worth it over JS?" — compute-heavy work with a hot inner loop and few boundary crossings. Not DOM manipulation, not glue code, not anything dominated by marshalling. Coarse-grained calls beat chatty ones every time.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — CANVAS &amp; INTERACTION (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: web-sys for the DOM — `&lt;canvas&gt;`, `getContext("2d")`, `ImageData`, `putImageData`, `FileReader` for uploads, `toBlob` for downloads.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Load a user's image onto a canvas and run your blur / sharpen / grayscale / Sobel through WASM, re-rendering live from a slider. Add `console_error_panic_hook` first, or panics vanish silently instead of showing up in devtools.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — PERFORMANCE &amp; SIZE (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Make it fast and small. Time both sides with `performance.now()`. Shrink with `opt-level = "z"`, `lto = true`, and `wasm-opt`, then find what's actually large using `twiggy`. Then turn on WASM SIMD (`-C target-feature=+simd128`) and re-measure your convolution.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: A benchmark table in the README — the same 4K Gaussian blur in plain JS, in WASM, and in WASM+SIMD, with the binary size for each build. Honest numbers, including the case where WASM doesn't win, which happens more often than blog posts admit.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — WORKERS &amp; INTEGRATION (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: A long filter on the main thread freezes the UI, so move the module into a Web Worker and post messages (transferables to avoid copies). Then how WASM ships in practice: `trunk` for an all-Rust frontend, or publishing a wasm-pack package to npm for a JS/TS app to import. Glance at Leptos/Yew/Dioxus for landscape awareness only — don't fall down that hole now.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Move processing into a Worker and keep the slider responsive while a heavy filter runs. Anki — "why is the JS↔WASM boundary expensive?", "what does wasm-bindgen actually generate?", "why does memory growth invalidate a view?"</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — PROJECT: BROWSER IMAGE EDITOR (3–4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday project — deploy a real editor to GitHub Pages: upload, a live filter chain (brightness, blur radius, sharpen, grayscale, edge detect), gamma-correct resize, and export. Everything runs client-side and nothing is uploaded anywhere, which is a genuine privacy pitch as well as an architecture. README with the JS vs WASM vs SIMD table and a demo GIF. This is the link you put at the top of your resume.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">rustwasm.github.io/docs/book</span><span class="resource-chip">wasm-bindgen guide</span><span class="resource-chip">docs.rs/web-sys</span><span class="resource-chip">docs.rs/twiggy</span><span class="resource-chip">MDN Canvas API</span><span class="resource-chip">trunkrs.dev</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="week-card" id="wc-8">
+                    <button class="week-header" onclick="toggleWeek(8)">
+                        <div class="week-badge">WK 8</div>
+                        <div class="week-meta">
+                            <div class="week-title">unsafe, SIMD, FFI &amp; Profiling — Then Ship the Capstone</div>
+                            <div class="week-focus">The hot loop, native interop, and the finish line · ~18 hrs</div>
+                        </div>
+                        <div class="week-right">
+                            <div class="completion-badge" id="badge-8">NOT STARTED</div>
+                            <div class="chevron">▾</div>
+                        </div>
+                    </button>
+                    <div class="week-body">
+                        <div class="daily-strip">TIE IT TOGETHER: the advanced corners this week are exactly the ones image code actually reaches for — and Wednesday connects the whole sprint back to the Python work you're already doing.</div>
+                        <div class="tasks-label">MONDAY — UNSAFE, HONESTLY (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: `unsafe` Rust — raw pointers, unsafe fn, the five superpowers, and the contract YOU are agreeing to uphold. Read the Rustonomicon intro chapters. Key insight: unsafe does not disable the borrow checker; it grants five specific abilities while you personally guarantee soundness. In image code the temptation is always `get_unchecked` in the inner loop to skip bounds checks.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Before reaching for unsafe, try to beat it safely — rewrite the hot loop with `chunks_exact` and iterator zips so the optimizer elides the checks on its own, and benchmark. Then write one documented `unsafe` version and see whether it's even faster. Frequently it isn't, and being able to say "I measured it and safe code matched" is a stronger answer than either evangelism or bravado.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">TUESDAY — SIMD (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: One instruction, sixteen pixels. Autovectorization does a lot for free when the loop is simple, contiguous, and branch-free — verify with `cargo-show-asm` or godbolt whether it actually happened rather than assuming. When it doesn't, reach for `std::arch` intrinsics or the `wide` crate. Saturating u8 arithmetic (clamping) is where hand-written SIMD wins most, because that's what the compiler struggles to prove safe.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Vectorize your grayscale or brightness pass and measure. Then note the ceiling: on a large blur you're memory-bandwidth bound, so SIMD stops helping — the same wall you hit with threads in Week 4, for the same reason.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">WEDNESDAY — FFI &amp; PyO3 (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Foreign Function Interface — `extern "C"`, `#[link]`, `#[no_mangle]` (now requiring `unsafe` in the 2024 edition), and bindgen/cbindgen. Then the one you'll actually use: PyO3 + maturin to expose Rust as a native Python module.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Publish `pixlab_py` — expose resize, color conversion, and normalization as Python functions taking and returning numpy arrays. This is a direct win for your age-progression project: the Python ML stack stays exactly where it is, and the preprocessing (decode, crop, align, resize in linear light, normalize) runs at native speed. Benchmark against PIL on the same batch and put the numbers in the README.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: The pattern here — Rust for the hot preprocessing loop, Python for the model and the glue — is how ML infrastructure teams actually adopt Rust today. Having built it, with measurements, is a much better story than "I'm interested in Rust."</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">THURSDAY — PROFILING &amp; CACHE BEHAVIOR (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: criterion for statistical benchmarks and `cargo flamegraph` for profiles. Then the thing that quietly dominates image performance: memory access order. Row-major traversal streams nicely through cache; column-major traversal on a large image misses on nearly every access. That is why the vertical pass of a separable blur is slower than the horizontal one, and why real implementations transpose or process in tiles.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Measure horizontal versus vertical pass on a 4K image, then implement a tiled or transposed vertical pass and show the improvement. Profile the full pipeline and fix whatever the top hotspot turns out to be — it usually isn't what you guessed.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🎯 INTERVIEW: "Why is your vertical blur slower than your horizontal one?" is a great question to be asked, and a better one to raise yourself. It shows you think about memory, not just about big-O.</div>
+                        </div>
+                        <div class="tasks-label" style="margin-top: 14px">FRIDAY — READ REAL CODE + CAPSTONE SCAFFOLD (2.5 HRS)</div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Reading-fluency drill — open the source of `image`, `fast_image_resize`, or `zune-jpeg` and follow one function end to end. Skim "Effective Rust" and the API-design chapters of "Rust for Rustaceans". Goal: open any Rust file and follow it.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">📗 LEARN: Walk your Anki deck end to end and skim the Book's table of contents. Anything still a black box gets marked shaky and revisited.</div>
+                        </div>
+                        <div class="task-row" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Pick the capstone (see Saturday) and scaffold it today — repo structure, CI, README skeleton.</div>
+                        </div>
+                        <div class="tasks-label apply" style="margin-top: 14px">SATURDAY — CAPSTONE: SHIP IT (4 HRS)</div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">Saturday capstone, pick one — (1) THE FULL PIPELINE: your axum service generating derivatives on demand using your own resize and encode code, with the WASM editor as its front end. Networking, imaging, and browser in a single story, and the strongest signal of the three. (2) `pixlab_py`: a polished, published Python package doing preprocessing for your age-progression project, benchmarked against PIL and OpenCV. (3) THE CODEC TRACK: turn the toy JPEG encoder into something respectable, add a decoder, publish to crates.io with `cargo-fuzz` coverage — decoders are one of the few places fuzzing is unambiguously the right tool, since they parse hostile input by definition.</div>
+                        </div>
+                        <div class="task-row saturday" onclick="toggleTask(this)">
+                            <div class="task-checkbox"></div>
+                            <div class="task-text">🔒 BUILD: Write a great README, record a 60-second demo GIF, pin the repo on your GitHub profile, and list all eight weeks of projects. You can now read and write idiomatic Rust, and you can hold a real conversation about color, sampling, compression, and delivery.</div>
+                        </div>
+                        <div class="resources-wrap">
+                            <div class="resources-label">RESOURCES</div>
+                            <div class="resources-chips"><span class="resource-chip">doc.rust-lang.org/nomicon</span><span class="resource-chip">docs.rs/criterion</span><span class="resource-chip">pyo3.rs + maturin</span><span class="resource-chip">Rust for Rustaceans</span><span class="resource-chip">effective-rust.com</span><span class="resource-chip">image crate source</span><span class="resource-chip">cargo-fuzz</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /phase 3 -->
+            <!-- ═══════════ SHAKY ═══════════ -->
+            <div
+                class="phase-section"
+                id="phase-shaky"
+                style="--phase-color: #c98a4b"
+            >
+                <div
+                    class="phase-header"
+                    style="border-left: 3px solid #c98a4b"
+                >
+                    <div class="phase-header-title" style="color: #c98a4b">
+                        ⚠ Shaky Concepts
+                    </div>
+                    <div class="phase-header-sub">
+                        Tasks you completed but aren't confident in — click to
+                        revisit
+                    </div>
+                </div>
+                <div
+                    id="shaky-empty"
+                    style="
+                        display: none;
+                        padding: 40px 0;
+                        text-align: center;
+                        color: var(--ink-faint);
+                        font-family: var(--mono);
+                        font-size: .8rem;
+                        letter-spacing: .1em;
+                        text-transform: uppercase;
+                    "
+                >
+                    No shaky concepts yet — mark tasks with ? to track them here
+                </div>
+                <div id="shaky-list"></div>
+            </div>
+        </div>
+        <!-- /main -->
+
+        <script>
+            // ── DATA ──
+            const state = {
+                tasks: JSON.parse(localStorage.getItem("pxr_tasks") || "{}"),
+            };
+
+            function save() {
+                try {
+                    localStorage.setItem(
+                        "pxr_tasks",
+                        JSON.stringify(state.tasks),
+                    );
+                } catch (e) {}
+            }
+
+            // ── TOGGLE WEEK ──
+            function toggleWeek(n) {
+                const card = document.getElementById("wc-" + n);
+                const isOpen = card.classList.contains("open");
+                // close all in active phase
+                document
+                    .querySelectorAll(".phase-section.active .week-card")
+                    .forEach((c) => c.classList.remove("open"));
+                if (!isOpen) card.classList.add("open");
+                try {
+                    localStorage.setItem(
+                        "pxr_open_week",
+                        isOpen ? "" : String(n),
+                    );
+                } catch (e) {}
+                updateAll();
+            }
+
+            // ── TOGGLE TASK — 4 states: 0=blank, 1=in-progress, 2=done, 3=shaky ──
+            function toggleTask(row) {
+                const card = row.closest(".week-card");
+                const wid = card.id.replace("wc-", "");
+                const rows = Array.from(card.querySelectorAll(".task-row"));
+                const idx = rows.indexOf(row);
+                const key = "w" + wid + "-" + idx;
+                const cur = state.tasks[key] || 0;
+                state.tasks[key] = (cur + 1) % 4;
+                save();
+                renderTask(row, state.tasks[key]);
+                updateBadge(wid, card);
+                updateTotal();
+                renderShakyPanel();
+            }
+
+            function renderTask(row, val) {
+                const box = row.querySelector(".task-checkbox");
+                const v = val || 0;
+                box.classList.remove("in-progress", "done-check", "shaky");
+                row.classList.remove("in-progress-row", "done", "shaky-row");
+                if (v === 1) {
+                    box.classList.add("in-progress");
+                    row.classList.add("in-progress-row");
+                } else if (v === 2) {
+                    box.classList.add("done-check");
+                    row.classList.add("done");
+                } else if (v === 3) {
+                    box.classList.add("shaky");
+                    row.classList.add("shaky-row");
+                }
+            }
+
+            // ── BADGE — in-progress=0.5, done=1, shaky=1 (done but flagged) ──
+            function updateBadge(wid, card) {
+                const rows = card.querySelectorAll(".task-row");
+                let score = 0;
+                let shakyCount = 0;
+                rows.forEach((r, i) => {
+                    const v = state.tasks["w" + wid + "-" + i] || 0;
+                    if (v === 2) score += 1;
+                    else if (v === 1) score += 0.5;
+                    else if (v === 3) {
+                        score += 1;
+                        shakyCount++;
+                    }
+                });
+                const pct = rows.length
+                    ? Math.round((score / rows.length) * 100)
+                    : 0;
+                const badge = document.getElementById("badge-" + wid);
+                if (!badge) return;
+                badge.style.opacity = "1";
+                if (pct >= 100 && shakyCount === 0) {
+                    badge.textContent = "✓ done";
+                    badge.style.color = "#4fb0a0";
+                    badge.style.borderColor = "#2e7d72";
+                    badge.style.background = "rgba(79,176,160,0.1)";
+                } else if (pct >= 100 && shakyCount > 0) {
+                    badge.textContent = "⚠ " + shakyCount + " shaky";
+                    badge.style.color = "#c98a4b";
+                    badge.style.borderColor = "#c98a4b";
+                    badge.style.background = "rgba(201,138,75,0.1)";
+                } else if (pct > 0) {
+                    badge.textContent = pct + "%";
+                    badge.style.color = "#f0813f";
+                    badge.style.borderColor = "#9e3b17";
+                    badge.style.background = "rgba(210,98,46,0.1)";
+                } else {
+                    badge.textContent = "not started";
+                    badge.style.color = "#727a86";
+                    badge.style.borderColor = "#3a4150";
+                    badge.style.background = "transparent";
+                }
+            }
+
+            // ── TOTAL PROGRESS — in-progress=0.5, done=1, shaky=1 ──
+            function updateTotal() {
+                let total = 0,
+                    score = 0;
+                document.querySelectorAll(".week-card").forEach((card) => {
+                    const wid = card.id.replace("wc-", "");
+                    const rows = card.querySelectorAll(".task-row");
+                    rows.forEach((r, i) => {
+                        total++;
+                        const v = state.tasks["w" + wid + "-" + i] || 0;
+                        if (v === 2) score += 1;
+                        else if (v === 1) score += 0.5;
+                        else if (v === 3) score += 1;
+                    });
+                });
+                const pct = total ? Math.round((score / total) * 100) : 0;
+                document.getElementById("totalPct").textContent = pct + "%";
+                document.getElementById("totalBar").style.width = pct + "%";
+
+                // update shaky tab badge
+                updateShakyTabCount();
+            }
+
+            function updateShakyTabCount() {
+                let count = 0;
+                Object.values(state.tasks).forEach((v) => {
+                    if (v === 3) count++;
+                });
+                const btn = document.getElementById("shaky-tab-btn");
+                if (count > 0) {
+                    btn.textContent = "⚠ Shaky (" + count + ")";
+                } else {
+                    btn.textContent = "⚠ Shaky Concepts";
+                }
+            }
+
+            // ── SHAKY PANEL ──
+            function renderShakyPanel() {
+                const list = document.getElementById("shaky-list");
+                const empty = document.getElementById("shaky-empty");
+
+                // gather all shaky tasks grouped by week
+                const byWeek = {};
+                document.querySelectorAll(".week-card").forEach((card) => {
+                    const wid = card.id.replace("wc-", "");
+                    const rows = Array.from(card.querySelectorAll(".task-row"));
+                    const weekTitle = card.querySelector(".week-title")
+                        ? card.querySelector(".week-title").textContent.trim()
+                        : "Week " + wid;
+                    rows.forEach((r, i) => {
+                        const key = "w" + wid + "-" + i;
+                        if ((state.tasks[key] || 0) === 3) {
+                            if (!byWeek[wid])
+                                byWeek[wid] = { title: weekTitle, tasks: [] };
+                            const txt = r.querySelector(".task-text")
+                                ? r
+                                      .querySelector(".task-text")
+                                      .textContent.trim()
+                                : "";
+                            byWeek[wid].tasks.push({ text: txt, rowIdx: i });
+                        }
+                    });
+                });
+
+                const weeks = Object.keys(byWeek);
+                if (weeks.length === 0) {
+                    empty.style.display = "block";
+                    list.innerHTML = "";
+                    // remove summary bar if exists
+                    const oldBar = document.getElementById("shaky-summary");
+                    if (oldBar) oldBar.remove();
+                    return;
+                }
+                empty.style.display = "none";
+
+                // summary bar
+                let totalShaky = 0;
+                weeks.forEach((w) => {
+                    totalShaky += byWeek[w].tasks.length;
+                });
+                const weekSpan = weeks.length;
+
+                let summaryHTML = `<div class="shaky-summary-bar" id="shaky-summary">
+                    <div class="s-stat"><div class="s-val">${totalShaky}</div><div class="s-lbl">TOTAL SHAKY</div></div>
+                    <div class="s-stat"><div class="s-val">${weekSpan}</div><div class="s-lbl">WEEKS AFFECTED</div></div>
+                </div>`;
+
+                let html = summaryHTML;
+                weeks.sort((a, b) => Number(a) - Number(b));
+                weeks.forEach((wid) => {
+                    const group = byWeek[wid];
+                    const wLabel = "WK " + wid.toUpperCase();
+                    html += `<div class="shaky-week-group">
+                        <div class="shaky-week-label">
+                            <span>${wLabel} · ${group.title}</span>
+                            <span class="shaky-count">${group.tasks.length} SHAKY</span>
+                        </div>`;
+                    group.tasks.forEach((t) => {
+                        html += `<div class="shaky-task-entry" onclick="jumpToWeek('${wid}')">
+                            <div class="shaky-dot"></div>
+                            <div class="shaky-task-text">${t.text}</div>
+                            <div class="shaky-goto">→ GO TO WEEK</div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                });
+
+                list.innerHTML = html;
+                updateShakyTabCount();
+            }
+
+            function jumpToWeek(wid) {
+                // find which phase this week belongs to and switch to it
+                const card = document.getElementById("wc-" + wid);
+                if (!card) return;
+                const section = card.closest(".phase-section");
+                if (!section) return;
+                const phaseId = section.id.replace("phase-", "");
+                if (phaseId === "shaky") return;
+
+                // switch tab
+                const tabs = document.querySelectorAll(".phase-tab");
+                const sections = document.querySelectorAll(".phase-section");
+                sections.forEach((s) => s.classList.remove("active"));
+                tabs.forEach((b) => b.classList.remove("active"));
+
+                section.classList.add("active");
+                // find matching tab by phase index
+                const phaseIdx = parseInt(phaseId);
+                if (!isNaN(phaseIdx) && tabs[phaseIdx]) {
+                    tabs[phaseIdx].classList.add("active");
+                }
+
+                // close all week cards in that phase, open the target
+                section
+                    .querySelectorAll(".week-card")
+                    .forEach((c) => c.classList.remove("open"));
+                card.classList.add("open");
+                try {
+                    localStorage.setItem("pxr_open_week", String(wid));
+                } catch (e) {}
+
+                // scroll to it
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+            }
+
+            // ── SHOW PHASE ──
+            function showPhase(idx, btn) {
+                document
+                    .querySelectorAll(".phase-section")
+                    .forEach((s) => s.classList.remove("active"));
+                document
+                    .querySelectorAll(".phase-tab")
+                    .forEach((b) => b.classList.remove("active"));
+                if (idx === "shaky") {
+                    document
+                        .getElementById("phase-shaky")
+                        .classList.add("active");
+                    renderShakyPanel();
+                } else {
+                    document
+                        .getElementById("phase-" + idx)
+                        .classList.add("active");
+                }
+                btn.classList.add("active");
+            }
+
+            // ── INIT ──
+            function updateAll() {
+                document.querySelectorAll(".week-card").forEach((card) => {
+                    const wid = card.id.replace("wc-", "");
+                    const rows = card.querySelectorAll(".task-row");
+                    rows.forEach((r, i) =>
+                        renderTask(r, state.tasks["w" + wid + "-" + i] || 0),
+                    );
+                    updateBadge(wid, card);
+                });
+                updateTotal();
+            }
+
+            // open the last-viewed week (falls back to week 0)
+            (function restoreOpenWeek() {
+                let saved = null;
+                try {
+                    saved = localStorage.getItem("pxr_open_week");
+                } catch (e) {}
+                if (saved && document.getElementById("wc-" + saved)) {
+                    jumpToWeek(saved);
+                } else {
+                    document.getElementById("wc-0").classList.add("open");
+                }
+            })();
+
+            // auto-apply learn/apply/saturday classes based on emoji and text
+            document.querySelectorAll(".task-text").forEach((el) => {
+                if (el.textContent.trim().startsWith("🔥"))
+                    el.closest(".task-row").classList.add("warm");
+                if (el.textContent.trim().startsWith("📗"))
+                    el.closest(".task-row").classList.add("learn");
+                if (el.textContent.trim().startsWith("🔒"))
+                    el.closest(".task-row").classList.add("apply");
+                if (el.textContent.trim().startsWith("🎯"))
+                    el.closest(".task-row").classList.add("interview");
+                if (el.textContent.trim().startsWith("Saturday"))
+                    el.closest(".task-row").classList.add("saturday");
+            });
+
+            updateAll();
+        </script>
+    </body>
+</html>

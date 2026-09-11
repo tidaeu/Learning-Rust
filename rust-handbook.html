@@ -1,0 +1,1440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rust Handbook — 8 Weeks to Fluent</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+:root {
+  --bg:          #16181d;
+  --bg-2:        #1c1f26;
+  --bg-3:        #232732;
+  --bg-raised:   #262b36;
+  --line:        #2e3340;
+  --line-2:      #3a4150;
+  --ink:         #ece8e1;
+  --ink-dim:     #aab0bb;
+  --ink-faint:   #727a86;
+  --rust:        #d2622e;
+  --rust-bright: #f0813f;
+  --rust-deep:   #9e3b17;
+  --patina:      #4fb0a0;
+  --patina-deep: #2e7d72;
+  --copper:      #c98a4b;
+  --gold:        #e8c96a;
+  --glow:        rgba(210,98,46,.14);
+  --glow-2:      rgba(79,176,160,.12);
+
+  --mono-display: "Space Mono", ui-monospace, monospace;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius: 5px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background:
+    radial-gradient(900px 500px at 88% -8%, var(--glow), transparent 60%),
+    radial-gradient(700px 500px at -5% 12%, var(--glow-2), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 100px;
+}
+
+/* ── HEADER ── */
+.site-header {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(20,22,27,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 24px;
+}
+.header-inner {
+  max-width: 1080px; margin: 0 auto;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.brand {
+  font-family: var(--mono-display);
+  font-size: .9rem; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 10px;
+}
+.brand-icon { color: var(--rust); font-size: 1.1rem; }
+.brand-sub {
+  font-family: var(--mono); font-size: .68rem;
+  color: var(--ink-faint); letter-spacing: .1em;
+  text-transform: uppercase; margin-top: 2px;
+}
+.nav-pills {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto;
+}
+.nav-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-3);
+  color: var(--ink-faint);
+  font-size: .7rem; font-family: var(--mono);
+  font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+  transition: all .15s;
+}
+.nav-pill:hover { border-color: var(--rust-deep); color: var(--ink-dim); }
+.nav-pill.p1 { --nc: #f0813f; }
+.nav-pill.p2 { --nc: #4fb0a0; }
+.nav-pill.p3 { --nc: #d2622e; }
+.nav-pill.active, .nav-pill:focus {
+  border-color: var(--nc, var(--rust));
+  background: color-mix(in srgb, var(--nc, var(--rust)) 14%, transparent);
+  color: var(--nc, var(--rust-bright));
+}
+
+/* ── LAYOUT ── */
+.layout { max-width: 1080px; margin: 0 auto; padding: 32px 24px 0; display: grid; grid-template-columns: 220px 1fr; gap: 32px; }
+@media(max-width:800px){ .layout { grid-template-columns: 1fr; } .toc { display: none; } }
+
+/* ── TOC ── */
+.toc {
+  position: sticky; top: 72px;
+  height: calc(100vh - 90px); overflow-y: auto;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.toc::-webkit-scrollbar { width: 4px; }
+.toc::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
+.toc-section { margin-bottom: 20px; }
+.toc-label {
+  font-family: var(--mono); font-size: .62rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px;
+}
+.toc-link {
+  display: block; padding: 3px 8px; border-radius: 3px;
+  font-size: .8rem; color: var(--ink-dim); text-decoration: none;
+  transition: all .12s; line-height: 1.4;
+}
+.toc-link:hover { color: var(--rust-bright); background: rgba(210,98,46,.07); }
+.toc-link.sub { padding-left: 18px; font-size: .75rem; color: var(--ink-faint); }
+.toc-link.sub:hover { color: var(--patina); }
+
+/* ── CONTENT ── */
+.content { min-width: 0; }
+
+/* hero */
+.hero {
+  padding: 32px 36px 28px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--rust);
+  border-radius: 10px;
+  margin-bottom: 40px;
+}
+.hero-eyebrow {
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--rust); margin-bottom: 10px;
+}
+.hero-title {
+  font-family: var(--mono-display); font-size: 2rem; font-weight: 700;
+  color: var(--ink); line-height: 1.15; letter-spacing: -.02em;
+  margin-bottom: 14px;
+}
+.hero-title span { color: var(--rust-bright); }
+.hero-body { font-size: 1rem; color: var(--ink-dim); line-height: 1.75; max-width: 680px; }
+.hero-body strong { color: var(--ink); }
+.hero-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.tag {
+  padding: 3px 10px; border-radius: 20px;
+  font-family: var(--mono); font-size: .68rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.tag-rust   { background: rgba(210,98,46,.15); color: var(--rust-bright); border: 1px solid rgba(210,98,46,.3); }
+.tag-patina { background: rgba(79,176,160,.12); color: var(--patina); border: 1px solid rgba(79,176,160,.28); }
+.tag-copper { background: rgba(201,138,75,.12); color: var(--copper); border: 1px solid rgba(201,138,75,.26); }
+
+/* phase dividers */
+.phase-divider {
+  display: flex; align-items: center; gap: 14px;
+  margin: 52px 0 32px;
+}
+.phase-divider-line { flex: 1; height: 1px; background: var(--line); }
+.phase-divider-badge {
+  padding: 5px 16px; border-radius: 20px;
+  font-family: var(--mono-display); font-size: .75rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+}
+.ph1 { background: rgba(240,129,63,.12); color: #f0813f; border: 1px solid rgba(240,129,63,.28); }
+.ph2 { background: rgba(79,176,160,.12); color: #4fb0a0; border: 1px solid rgba(79,176,160,.28); }
+.ph3 { background: rgba(210,98,46,.12); color: var(--rust); border: 1px solid rgba(210,98,46,.28); }
+
+/* lesson cards */
+.lesson {
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 8px; margin-bottom: 24px; overflow: hidden;
+}
+.lesson-header {
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--bg-3);
+}
+.lesson-week-badge {
+  font-family: var(--mono); font-size: .65rem; font-weight: 700;
+  padding: 3px 8px; border-radius: 12px;
+  white-space: nowrap; flex-shrink: 0; margin-top: 3px;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.lesson-meta { flex: 1; }
+.lesson-title {
+  font-family: var(--mono-display); font-size: 1.1rem; font-weight: 700;
+  color: var(--ink); letter-spacing: -.01em; line-height: 1.25;
+}
+.lesson-subtitle {
+  font-size: .8rem; color: var(--ink-faint); font-family: var(--mono);
+  margin-top: 5px; line-height: 1.5;
+}
+.lesson-body { padding: 24px; }
+
+/* section headers inside lesson */
+.sh {
+  font-family: var(--mono); font-size: .68rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--rust); margin: 22px 0 10px;
+  padding-bottom: 5px; border-bottom: 1px solid var(--line);
+}
+.sh:first-child { margin-top: 0; }
+
+/* prose */
+p { color: var(--ink-dim); margin-bottom: 12px; line-height: 1.75; }
+p strong { color: var(--ink); }
+p em { color: var(--copper); font-style: italic; }
+ul, ol { margin: 0 0 14px 20px; }
+li { color: var(--ink-dim); margin-bottom: 5px; line-height: 1.65; }
+li strong { color: var(--ink); }
+li::marker { color: var(--rust); }
+
+/* concept row */
+.concept-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
+}
+@media(max-width:640px){ .concept-row { grid-template-columns: 1fr; } }
+.concept-card {
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.concept-card .cc-title {
+  font-family: var(--mono); font-size: .72rem; font-weight: 600;
+  color: var(--patina); letter-spacing: .06em; margin-bottom: 6px;
+}
+.concept-card p { font-size: .88rem; margin: 0; }
+
+/* code blocks */
+pre {
+  background: #0f1117; border: 1px solid var(--line);
+  border-left: 3px solid var(--rust-deep);
+  border-radius: var(--radius);
+  padding: 16px 18px; margin: 12px 0 18px;
+  overflow-x: auto;
+  font-family: var(--mono); font-size: .84rem; line-height: 1.6;
+  color: #d0cdc7;
+}
+pre .c  { color: var(--ink-faint); font-style: italic; }       /* comment */
+pre .k  { color: #e06c75; }        /* keyword: fn, let, pub */
+pre .kw { color: #f0813f; }        /* secondary keyword: impl, struct, enum */
+pre .t  { color: #e5c07b; }        /* type */
+pre .s  { color: #98c379; }        /* string */
+pre .n  { color: #61afef; }        /* function name / method */
+pre .v  { color: #c678dd; }        /* variable / param */
+pre .m  { color: var(--copper); }  /* macro */
+pre .lf { color: #56b6c2; }        /* lifetime */
+pre .p  { color: var(--patina); }  /* punctuation emphasis */
+pre .num{ color: #d19a66; }        /* number */
+code { font-family: var(--mono); font-size: .85em; background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 3px; color: var(--copper); }
+
+/* callout boxes */
+.callout {
+  border-radius: var(--radius); padding: 13px 16px; margin: 14px 0;
+  font-size: .91rem; line-height: 1.65;
+  display: flex; gap: 11px; align-items: flex-start;
+}
+.callout-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.callout-body { flex: 1; }
+.callout-body p { margin: 0; font-size: inherit; }
+.callout-body strong { color: var(--ink); }
+.callout.info    { background: rgba(79,176,160,.09); border: 1px solid rgba(79,176,160,.22); }
+.callout.warning { background: rgba(201,138,75,.09); border: 1px solid rgba(201,138,75,.22); }
+.callout.danger  { background: rgba(210,98,46,.09);  border: 1px solid rgba(210,98,46,.22); }
+.callout.tip     { background: rgba(240,129,63,.08); border: 1px solid rgba(240,129,63,.2); }
+
+/* comparison table */
+.cmp-table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: .88rem; }
+.cmp-table th {
+  background: var(--bg-3); font-family: var(--mono); font-size: .68rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
+  padding: 9px 12px; text-align: left; border: 1px solid var(--line);
+}
+.cmp-table td { padding: 9px 12px; border: 1px solid var(--line); color: var(--ink-dim); vertical-align: top; }
+.cmp-table tr:nth-child(odd) td { background: var(--bg-3); }
+.cmp-table tr:nth-child(even) td { background: var(--bg-2); }
+.cmp-table td strong { color: var(--ink); }
+.cmp-table td code { font-size: .82em; }
+
+/* links */
+a { color: var(--patina); text-decoration: none; border-bottom: 1px solid transparent; transition: all .15s; }
+a:hover { color: #6fd0c0; border-bottom-color: var(--patina-deep); }
+
+/* resource links row */
+.res-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.res-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  background: var(--bg-3); border: 1px solid var(--line-2);
+  font-family: var(--mono); font-size: .72rem; color: var(--patina);
+  text-decoration: none; transition: all .15s;
+}
+.res-link:hover { border-color: var(--patina-deep); background: rgba(79,176,160,.08); border-bottom-color: transparent; }
+.res-link::before { content: "↗"; font-size: .65rem; color: var(--ink-faint); }
+
+/* mental model diagram */
+.model-box {
+  background: #0f1117; border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px 20px; margin: 14px 0;
+  font-family: var(--mono); font-size: .83rem; color: var(--ink-dim);
+  line-height: 1.8; white-space: pre;
+  overflow-x: auto;
+}
+.model-box .hl { color: var(--rust-bright); }
+.model-box .hl2 { color: var(--patina); }
+.model-box .hl3 { color: var(--copper); }
+.model-box .dim { color: var(--ink-faint); }
+
+/* quiz / interview q */
+.interview-q {
+  background: rgba(201,138,75,.06); border: 1px solid rgba(201,138,75,.2);
+  border-left: 3px solid var(--copper); border-radius: var(--radius);
+  padding: 12px 16px; margin: 10px 0;
+}
+.interview-q .iq-label {
+  font-family: var(--mono); font-size: .62rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--copper); margin-bottom: 4px;
+}
+.interview-q p { font-size: .89rem; margin: 0; }
+.interview-q .answer { color: var(--ink-faint); font-size: .84rem; margin-top: 6px; }
+
+/* week intro banner */
+.week-intro {
+  background: var(--bg-3); border-left: 3px solid var(--rust-bright);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 10px 16px; margin-bottom: 20px;
+  font-size: .9rem; color: var(--ink-dim); line-height: 1.6;
+}
+.week-intro strong { color: var(--rust-bright); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <div>
+      <div class="brand"><span class="brand-icon">⚙</span> Rust Handbook</div>
+      <div class="brand-sub">Concept reference · 8 weeks · Tim's sprint companion</div>
+    </div>
+    <nav class="nav-pills">
+      <a class="nav-pill p1" href="#phase1">P1 · Core Rust</a>
+      <a class="nav-pill p2" href="#phase2">P2 · Async & Net</a>
+      <a class="nav-pill p3" href="#phase3">P3 · WASM & Tooling</a>
+    </nav>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- TOC -->
+  <aside class="toc">
+    <div class="toc-section">
+      <div class="toc-label">Overview</div>
+      <a class="toc-link" href="#intro">How to use</a>
+      <a class="toc-link" href="#mental-model">The ownership model</a>
+    </div>
+    <div class="toc-section">
+      <div class="toc-label">Phase 1 · Core</div>
+      <a class="toc-link" href="#w0">Wk 0 · Setup</a>
+      <a class="toc-link sub" href="#w0-cargo">Cargo & toolchain</a>
+      <a class="toc-link" href="#w1">Wk 1 · Ownership</a>
+      <a class="toc-link sub" href="#w1-ownership">Move, copy, borrow</a>
+      <a class="toc-link sub" href="#w1-lifetimes">Lifetimes</a>
+      <a class="toc-link sub" href="#w1-enums">Enums & match</a>
+      <a class="toc-link" href="#w2">Wk 2 · Traits & Errors</a>
+      <a class="toc-link sub" href="#w2-generics">Generics</a>
+      <a class="toc-link sub" href="#w2-traits">Traits</a>
+      <a class="toc-link sub" href="#w2-errors">Error handling</a>
+      <a class="toc-link sub" href="#w2-hashmap">HashMap from scratch</a>
+      <a class="toc-link" href="#w3">Wk 3 · Iterators & Modules</a>
+      <a class="toc-link sub" href="#w3-iterators">Iterators & closures</a>
+      <a class="toc-link sub" href="#w3-smartptr">Smart pointers</a>
+      <a class="toc-link sub" href="#w3-modules">Modules & Cargo</a>
+    </div>
+    <div class="toc-section">
+      <div class="toc-label">Phase 2 · Async</div>
+      <a class="toc-link" href="#w4">Wk 4 · Concurrency</a>
+      <a class="toc-link sub" href="#w4-threads">Threads & channels</a>
+      <a class="toc-link sub" href="#w4-async">Async/await model</a>
+      <a class="toc-link sub" href="#w4-tokio">Tokio</a>
+      <a class="toc-link" href="#w5">Wk 5 · Backend</a>
+      <a class="toc-link sub" href="#w5-axum">Axum & HTTP</a>
+      <a class="toc-link sub" href="#w5-serde">Serde</a>
+      <a class="toc-link sub" href="#w5-sqlx">SQLx</a>
+    </div>
+    <div class="toc-section">
+      <div class="toc-label">Phase 3 · WASM</div>
+      <a class="toc-link" href="#w6">Wk 6 · Browser WASM</a>
+      <a class="toc-link sub" href="#w6-wasm">WASM fundamentals</a>
+      <a class="toc-link sub" href="#w6-bindgen">wasm-bindgen</a>
+      <a class="toc-link" href="#w7">Wk 7 · WASI & Macros</a>
+      <a class="toc-link sub" href="#w7-wasi">WASI & Wasmtime</a>
+      <a class="toc-link sub" href="#w7-macros">Macros</a>
+      <a class="toc-link" href="#w8">Wk 8 · Advanced</a>
+      <a class="toc-link sub" href="#w8-unsafe">Unsafe & FFI</a>
+      <a class="toc-link sub" href="#w8-perf">Performance</a>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- HERO -->
+    <div class="hero" id="intro">
+      <div class="hero-eyebrow">Rust · 8-Week Sprint · Concept Handbook</div>
+      <div class="hero-title">Everything you need to<br><span>understand the plan</span></div>
+      <div class="hero-body">
+        <p>Your plan tells you <em>what</em> to do each day. This handbook tells you <em>why</em> each concept exists, <em>how</em> it works at the mental-model level, and shows you annotated code so the idea is concrete before you touch Rustlings or the Book chapter. Read the handbook section <strong>before</strong> the corresponding plan day, not after — it de-risks the first hour.</p>
+        <p>Structure mirrors the plan exactly: Phase 1 (Weeks 0–3), Phase 2 (Weeks 4–5), Phase 3 (Weeks 6–8). Each lesson covers the core concept, a worked example, the interview-level framing, and direct links to everything referenced in the plan.</p>
+      </div>
+      <div class="hero-tags">
+        <span class="tag tag-rust">Ownership · Lifetimes · Traits</span>
+        <span class="tag tag-patina">Async · Tokio · Axum · SQLx</span>
+        <span class="tag tag-copper">WASM · WASI · Macros · unsafe</span>
+      </div>
+    </div>
+
+    <!-- MENTAL MODEL ANCHOR -->
+    <div class="lesson" id="mental-model">
+      <div class="lesson-header" style="background: rgba(210,98,46,.07);">
+        <div class="lesson-week-badge" style="background:rgba(210,98,46,.15);color:var(--rust-bright);border:1px solid rgba(210,98,46,.3);">ANCHOR</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">The one idea Rust is built on</div>
+          <div class="lesson-subtitle">Read this first. Every other concept flows from here.</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="sh">The ownership invariant</div>
+        <p>Every other language manages memory in one of two ways: <strong>garbage collection</strong> (JVM, Python, Go — pay a runtime cost; the GC finds unreachable memory) or <strong>manual allocation</strong> (C, C++ — you call free; you can get it wrong). Rust does neither. Instead it encodes a single compile-time rule:</p>
+        <div class="callout info">
+          <span class="callout-icon">⚡</span>
+          <div class="callout-body"><p><strong>Every value has exactly one owner at a time. When the owner goes out of scope, the value is dropped (freed) — automatically, with no runtime cost.</strong></p></div>
+        </div>
+        <p>From that one rule, the <em>borrow checker</em> — a static analysis pass in the compiler — can prove at compile time that your program is free of use-after-free bugs, double-frees, data races, and dangling pointers. No runtime overhead, no GC pauses.</p>
+        <div class="sh">The three rules (memorise these)</div>
+        <div class="model-box"><span class="hl">Rule 1</span>  Each value in Rust has exactly one owner.
+<span class="hl">Rule 2</span>  When the owner goes out of scope, the value is dropped.
+<span class="hl2">Rule 3 (borrowing)</span>  At any given time you may have EITHER:
+         • any number of shared references  <span class="hl3">&T</span>   (read-only)
+         • exactly ONE mutable reference     <span class="hl3">&mut T</span> (read+write)
+         Never both at the same time.</div>
+        <p>Rule 3 is why Rust eliminates data races: a data race requires <em>concurrent mutable access</em>. The borrow checker makes that illegal <strong>even in single-threaded code</strong> — and then the same type system propagates the guarantee to threads via the <code>Send</code> and <code>Sync</code> marker traits.</p>
+        <p>Everything else in the language — lifetimes, smart pointers, <code>Arc&lt;Mutex&lt;T&gt;&gt;</code>, the async model — is the type system finding ways to <em>express valid programs</em> that stay within these rules.</p>
+      </div>
+    </div>
+
+    <!-- ══════════ PHASE 1 ══════════ -->
+    <div class="phase-divider" id="phase1">
+      <div class="phase-divider-line"></div>
+      <div class="phase-divider-badge ph1">Phase 1 · Core Rust · Weeks 0–3</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- ── WEEK 0 ── -->
+    <div class="lesson" id="w0">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(79,176,160,.12);color:var(--patina);border:1px solid rgba(79,176,160,.28);">WK 0</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Setup, Toolchain & First Taste</div>
+          <div class="lesson-subtitle">rustup · Cargo · editions · the guessing game loop</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="week-intro">Goal: get the compile → error → fix loop in your hands. The <strong>ideas</strong> can wait until Week 1.</div>
+
+        <div class="sh" id="w0-cargo">Cargo & the Rust edition model</div>
+        <p><strong>Cargo</strong> is Rust's build system and package manager — think <code>npm</code> + <code>webpack</code> + <code>pip</code> rolled into one. A Cargo project is defined by <code>Cargo.toml</code>:</p>
+<pre><span class="c"># Cargo.toml — every project starts here</span>
+[package]
+name    = <span class="s">"hello-rust"</span>
+version = <span class="s">"0.1.0"</span>
+edition = <span class="s">"2024"</span>   <span class="c"># language edition — use 2024 for new projects</span>
+
+[dependencies]
+<span class="c"># crates from crates.io go here, e.g.:</span>
+anyhow = <span class="s">"1"</span></pre>
+        <p>Key <strong>editions</strong>: Rust ships a new edition every 3 years. Edition 2024 (stabilised early 2025) is the current default. Editions are <em>per-crate opt-in</em> — your code and a dependency can be different editions; the compiler handles it. The main 2024 changes relevant to you: <code>async fn</code> in traits is now stable without extra crates, and <code>extern "C"</code> functions now implicitly require <code>unsafe</code> at the call site.</p>
+
+        <div class="sh">Essential Cargo commands</div>
+        <div class="concept-row">
+          <div class="concept-card">
+            <div class="cc-title">Build & Run</div>
+            <p><code>cargo new my-project</code> — scaffold<br><code>cargo run</code> — build + execute<br><code>cargo build --release</code> — optimised binary<br><code>cargo check</code> — type-check only, fast</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Test & Lint</div>
+            <p><code>cargo test</code> — run all tests<br><code>cargo clippy</code> — opinionated linter<br><code>cargo fmt</code> — auto-format<br><code>cargo doc --open</code> — build + view docs</p>
+          </div>
+        </div>
+
+        <div class="sh">The four resources you'll live in</div>
+        <div class="res-row">
+          <a class="res-link" href="https://rust-book.cs.brown.edu" target="_blank">The Book (Brown interactive)</a>
+          <a class="res-link" href="https://rustlings.cool" target="_blank">Rustlings</a>
+          <a class="res-link" href="https://doc.rust-lang.org/rust-by-example/" target="_blank">Rust by Example</a>
+          <a class="res-link" href="https://doc.rust-lang.org/std/" target="_blank">std docs</a>
+          <a class="res-link" href="https://rustup.rs" target="_blank">rustup.rs</a>
+        </div>
+
+        <div class="sh">Why the compiler errors are famously good</div>
+        <p>rustc's error messages are designed to be <em>the tutorial</em>. When the borrow checker rejects your code it usually tells you exactly which rule was violated, shows you the conflicting borrows, and often suggests the fix. Fight the compiler on purpose in Week 0 — write <code>let s1 = String::from("hello"); let s2 = s1; println!("{}", s1);</code> and read the error. That error <em>is</em> the ownership lesson.</p>
+      </div>
+    </div>
+
+    <!-- ── WEEK 1 ── -->
+    <div class="lesson" id="w1">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(240,129,63,.12);color:var(--rust-bright);border:1px solid rgba(240,129,63,.28);">WK 1</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Ownership, Borrowing & Lifetimes</div>
+          <div class="lesson-subtitle">The make-or-break week · everything else depends on this</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="week-intro">The whole week is one concept approached from different angles. <strong>Don't rush past confusion</strong> — if something doesn't click, that's signal to re-read, not to move on.</div>
+
+        <div class="sh" id="w1-ownership">Move semantics vs Copy vs Clone</div>
+        <p>Rust types fall into two categories based on the <code>Copy</code> trait:</p>
+        <table class="cmp-table">
+          <tr><th>Category</th><th>Types</th><th>What happens on assignment / function call</th></tr>
+          <tr><td><strong>Copy</strong></td><td>all integers, floats, bools, char, tuples of Copy types, <code>&T</code> references</td><td>A bitwise copy is made. Original still valid. No overhead.</td></tr>
+          <tr><td><strong>Move</strong> (not Copy)</td><td><code>String</code>, <code>Vec&lt;T&gt;</code>, <code>Box&lt;T&gt;</code>, your structs</td><td>Ownership transfers. Original is <em>moved out</em> and can no longer be used. Prevents double-free.</td></tr>
+        </table>
+<pre><span class="k">let</span> <span class="v">x</span>: <span class="t">i32</span> = <span class="num">5</span>;
+<span class="k">let</span> <span class="v">y</span> = <span class="v">x</span>;       <span class="c">// Copy — x still valid, y gets its own copy</span>
+<span class="n">println!</span>(<span class="s">"{} {}"</span>, <span class="v">x</span>, <span class="v">y</span>); <span class="c">// fine</span>
+
+<span class="k">let</span> <span class="v">s1</span> = <span class="t">String</span>::<span class="n">from</span>(<span class="s">"hello"</span>);
+<span class="k">let</span> <span class="v">s2</span> = <span class="v">s1</span>;       <span class="c">// MOVE — s1 no longer owns the data</span>
+<span class="c">// println!("{}", s1); ← COMPILE ERROR: value used after move</span>
+<span class="n">println!</span>(<span class="s">"{}"</span>, <span class="v">s2</span>); <span class="c">// fine — s2 is the owner now</span>
+
+<span class="k">let</span> <span class="v">s3</span> = <span class="v">s2</span>.<span class="n">clone</span>(); <span class="c">// explicit deep copy — now both s2 and s3 are valid</span></pre>
+        <div class="callout warning">
+          <span class="callout-icon">⚠</span>
+          <div class="callout-body"><p><strong>Don't reach for <code>.clone()</code> to fix every borrow error</strong> — it's often the right tool, but when you find yourself cloning frequently it usually means you should be borrowing instead. Over-cloning is idiomatic to beginners and a red flag in interviews.</p></div>
+        </div>
+
+        <div class="sh">Borrowing — the aliasing rule in one picture</div>
+        <p>A <em>reference</em> lets you use a value without taking ownership. References are always valid — the compiler guarantees no dangling references.</p>
+<pre><span class="k">fn</span> <span class="n">length</span>(<span class="v">s</span>: &<span class="t">String</span>) -> <span class="t">usize</span> {  <span class="c">// borrows s, does NOT take ownership</span>
+    <span class="v">s</span>.<span class="n">len</span>()
+}  <span class="c">// s goes out of scope here, but it's a borrow — nothing is dropped</span>
+
+<span class="k">let</span> <span class="k">mut</span> <span class="v">s</span> = <span class="t">String</span>::<span class="n">from</span>(<span class="s">"hello"</span>);
+<span class="k">let</span> <span class="v">len</span> = <span class="n">length</span>(&<span class="v">s</span>);   <span class="c">// shared borrow — s is still the owner</span>
+<span class="v">s</span>.<span class="n">push_str</span>(<span class="s">", world"</span>);  <span class="c">// fine — mutable access after shared borrow ended</span></pre>
+        <div class="model-box"><span class="hl">At any moment, for a given value, you may have:</span>
+
+<span class="hl2">Multiple shared (&T)</span>        <span class="hl3">OR</span>     <span class="hl2">Exactly one mutable (&mut T)</span>
+ read-only, any count                   full access, exclusive
+                     <span class="dim">NEVER both simultaneously</span>
+
+<span class="dim">This maps directly onto a readers/writer lock:</span>
+ multiple readers = OK    •    one writer, no readers = OK    •    both = ERROR</div>
+        <p>This rule means: if you see a compile error about "cannot borrow as mutable because it is also borrowed as immutable", draw the timeline: find where the shared borrow starts and ends, and see if your mutable borrow overlaps. Usually the fix is restructuring the borrow scopes.</p>
+
+        <div class="sh">&str vs String — the #1 early friction point</div>
+        <table class="cmp-table">
+          <tr><th>Type</th><th>Where it lives</th><th>Use in</th></tr>
+          <tr><td><code>&str</code></td><td>Borrowed slice — could point into a <code>String</code>, a string literal, or anywhere</td><td>Function parameters. Prefer <code>&str</code> over <code>&String</code> — it's strictly more flexible.</td></tr>
+          <tr><td><code>String</code></td><td>Heap-allocated, owned, growable</td><td>Return values you're constructing. Fields that need to own their data.</td></tr>
+        </table>
+        <p><strong>Golden rule:</strong> functions that just <em>read</em> a string should take <code>&str</code>. Callers can pass either a <code>&str</code> literal or a <code>&String</code> (which auto-derefs to <code>&str</code>).</p>
+
+        <div class="sh" id="w1-lifetimes">Lifetimes — labels, not durations</div>
+        <p>Lifetimes are the compiler's notation for expressing <em>which reference came from where</em>. They exist to prevent dangling references. The crucial insight: <strong>lifetimes don't change how long values live — they only describe relationships between references so the compiler can verify safety.</strong></p>
+<pre><span class="c">// Without explicit lifetime: compiler can't verify the return reference is valid</span>
+<span class="c">// The question: does the returned &str point into s1 or s2?</span>
+<span class="k">fn</span> <span class="n">longest</span>&lt;<span class="lf">'a</span>&gt;(<span class="v">s1</span>: &<span class="lf">'a</span> <span class="t">str</span>, <span class="v">s2</span>: &<span class="lf">'a</span> <span class="t">str</span>) -> &<span class="lf">'a</span> <span class="t">str</span> {
+    <span class="c">// 'a means: "the return value lives at least as long as the shorter of s1 and s2"</span>
+    <span class="k">if</span> <span class="v">s1</span>.<span class="n">len</span>() > <span class="v">s2</span>.<span class="n">len</span>() { <span class="v">s1</span> } <span class="k">else</span> { <span class="v">s2</span> }
+}</pre>
+        <div class="callout tip">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body"><p><strong>Lifetime elision rules</strong>: most functions don't need explicit lifetime annotations because the compiler applies three inference rules. You only write <code>'a</code> when the rules are ambiguous — typically when a function returns a reference derived from multiple input references, as above. If your function takes one reference input and returns a reference, elision handles it.</p></div>
+        </div>
+        <p>Watch Jon Gjengset's <a href="https://www.youtube.com/watch?v=rAl-9HwD858" target="_blank">Crust of Rust: Lifetime Annotations</a> — it's the single best explanation. Plan on watching it twice.</p>
+
+        <div class="sh" id="w1-enums">Enums, Option and match</div>
+        <p>Rust enums are <em>algebraic data types</em> — each variant can carry different data. <code>Option&lt;T&gt;</code> is just an enum with two variants: <code>Some(T)</code> and <code>None</code>. It replaces null. The compiler forces you to handle both cases.</p>
+<pre><span class="c">// A data-carrying enum (Shape for the plan's Saturday project)</span>
+<span class="kw">enum</span> <span class="t">Shape</span> {
+    <span class="t">Circle</span>(<span class="t">f64</span>),           <span class="c">// carries radius</span>
+    <span class="t">Rectangle</span>(<span class="t">f64</span>, <span class="t">f64</span>),  <span class="c">// carries width, height</span>
+}
+
+<span class="kw">impl</span> <span class="t">Shape</span> {
+    <span class="k">fn</span> <span class="n">area</span>(&<span class="k">self</span>) -> <span class="t">f64</span> {
+        <span class="k">match</span> <span class="k">self</span> {
+            <span class="t">Shape</span>::<span class="t">Circle</span>(<span class="v">r</span>)       => <span class="num">3.14159</span> * <span class="v">r</span> * <span class="v">r</span>,
+            <span class="t">Shape</span>::<span class="t">Rectangle</span>(<span class="v">w</span>, <span class="v">h</span>) => <span class="v">w</span> * <span class="v">h</span>,
+        }
+    }
+}
+
+<span class="c">// Option — every value that might not exist</span>
+<span class="k">fn</span> <span class="n">divide</span>(<span class="v">a</span>: <span class="t">f64</span>, <span class="v">b</span>: <span class="t">f64</span>) -> <span class="t">Option</span>&lt;<span class="t">f64</span>&gt; {
+    <span class="k">if</span> <span class="v">b</span> == <span class="num">0.0</span> { <span class="t">None</span> } <span class="k">else</span> { <span class="t">Some</span>(<span class="v">a</span> / <span class="v">b</span>) }
+}
+
+<span class="c">// if let — concise single-arm match</span>
+<span class="k">if let</span> <span class="t">Some</span>(<span class="v">result</span>) = <span class="n">divide</span>(<span class="num">10.0</span>, <span class="num">3.0</span>) {
+    <span class="n">println!</span>(<span class="s">"Result: {result:.2}"</span>);
+}</pre>
+
+        <div class="sh">Week 1 interview framing</div>
+        <div class="interview-q">
+          <div class="iq-label">Interview Q</div>
+          <p>What problem does Rust's ownership system solve, and why doesn't it need a GC?</p>
+          <div class="answer">Answer: Memory safety bugs (use-after-free, double-free, data races) are the most common class of CVEs in C/C++ codebases. GC solves this but imposes runtime overhead and nondeterministic pauses. Rust instead encodes ownership as a <em>type-level invariant</em> verified at compile time — one owner, one drop — so the compiler can insert frees automatically, like a GC but at zero runtime cost. The borrow checker extends this to prevent concurrent mutable access without runtime locks.</div>
+        </div>
+
+        <div class="res-row">
+          <a class="res-link" href="https://rust-book.cs.brown.edu/ch04-00-understanding-ownership.html" target="_blank">Book Ch. 4 — Ownership (Brown edition)</a>
+          <a class="res-link" href="https://www.youtube.com/watch?v=rAl-9HwD858" target="_blank">Crust of Rust: Lifetime Annotations (YouTube)</a>
+          <a class="res-link" href="https://doc.rust-lang.org/rust-by-example/scope/borrow.html" target="_blank">Rust by Example — Borrowing</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WEEK 2 ── -->
+    <div class="lesson" id="w2">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(240,129,63,.12);color:var(--rust-bright);border:1px solid rgba(240,129,63,.28);">WK 2</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Traits, Generics & Error Handling</div>
+          <div class="lesson-subtitle">Polymorphism the Rust way · HashMap from scratch</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="sh" id="w2-generics">Generics & monomorphization</div>
+        <p>Generics let you write code parameterised over types. Unlike Java generics (which use type erasure at runtime), Rust uses <strong>monomorphization</strong>: the compiler generates a separate copy of the function for each concrete type it's called with. Zero runtime overhead — the cost of abstraction is paid entirely at compile time.</p>
+<pre><span class="c">// A generic function with a trait bound</span>
+<span class="k">fn</span> <span class="n">largest</span>&lt;<span class="t">T</span>: <span class="t">PartialOrd</span>&gt;(<span class="v">list</span>: &[<span class="t">T</span>]) -> &<span class="t">T</span> {
+    <span class="k">let</span> <span class="k">mut</span> <span class="v">largest</span> = &<span class="v">list</span>[<span class="num">0</span>];
+    <span class="k">for</span> <span class="v">item</span> <span class="k">in</span> <span class="v">list</span> {
+        <span class="k">if</span> <span class="v">item</span> > <span class="v">largest</span> { <span class="v">largest</span> = <span class="v">item</span>; }
+    }
+    <span class="v">largest</span>
+}
+<span class="c">// Compiler creates: largest_i32, largest_f64, etc. No vtable, no boxing.</span></pre>
+
+        <div class="sh" id="w2-traits">Traits — Rust's interfaces</div>
+        <p>A <em>trait</em> defines shared behaviour. Any type can implement any trait. This is Rust's primary polymorphism mechanism, and it's where the language's power comes from.</p>
+<pre><span class="kw">trait</span> <span class="t">Area</span> {
+    <span class="k">fn</span> <span class="n">area</span>(&<span class="k">self</span>) -> <span class="t">f64</span>;
+    <span class="k">fn</span> <span class="n">describe</span>(&<span class="k">self</span>) -> <span class="t">String</span> {  <span class="c">// default method</span>
+        <span class="n">format!</span>(<span class="s">"Area: {:.2}"</span>, <span class="k">self</span>.<span class="n">area</span>())
+    }
+}
+<span class="kw">impl</span> <span class="t">Area</span> <span class="k">for</span> <span class="t">Circle</span> {
+    <span class="k">fn</span> <span class="n">area</span>(&<span class="k">self</span>) -> <span class="t">f64</span> { <span class="num">3.14159</span> * <span class="k">self</span>.<span class="v">radius</span>.powi(<span class="num">2</span>) }
+}</pre>
+
+        <p><strong>Static dispatch (<code>impl Trait</code> / generic)</strong> vs <strong>dynamic dispatch (<code>dyn Trait</code>)</strong>:</p>
+        <table class="cmp-table">
+          <tr><th></th><th>impl Trait / generics</th><th>dyn Trait</th></tr>
+          <tr><td><strong>How it works</strong></td><td>Monomorphized at compile time — concrete type known</td><td>Vtable pointer at runtime — concrete type unknown</td></tr>
+          <tr><td><strong>Cost</strong></td><td>Zero — inlined like a concrete function</td><td>Vtable lookup + pointer indirection</td></tr>
+          <tr><td><strong>Use when</strong></td><td>You know all types at compile time (almost always)</td><td>Heterogeneous collections; plugin systems; object-safe trait objects</td></tr>
+          <tr><td><strong>Example</strong></td><td><code>fn draw(shape: &impl Area)</code></td><td><code>fn draw(shape: &dyn Area)</code><br><code>Vec&lt;Box&lt;dyn Area&gt;&gt;</code></td></tr>
+        </table>
+
+        <div class="sh">The essential derives</div>
+        <p><code>#[derive(...)]</code> is a proc-macro that auto-implements standard traits:</p>
+        <div class="concept-row">
+          <div class="concept-card">
+            <div class="cc-title">Debug + Display</div>
+            <p><code>#[derive(Debug)]</code> enables <code>{:?}</code> formatting. For user-facing output implement <code>Display</code> manually. Always derive <code>Debug</code> on your types.</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Clone + Copy</div>
+            <p><code>Clone</code>: opt-in deep copy via <code>.clone()</code>. <code>Copy</code> (requires <code>Clone</code>): makes the type implicitly bitwise-copyable — no move. Only for small stack types.</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">PartialEq + Eq + Hash</div>
+            <p><code>PartialEq</code>: <code>==</code> and <code>!=</code>. <code>Eq</code>: total equality (no NaN-like weirdness). <code>Hash</code>: required to use your type as a <code>HashMap</code> key — <strong>requires <code>Eq</code></strong>.</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Default</div>
+            <p><code>Default</code>: provides <code>T::default()</code>. Useful for builder patterns and struct initialization. Common to derive alongside <code>Debug</code>.</p>
+          </div>
+        </div>
+
+        <div class="sh" id="w2-errors">Error handling — the Rust way</div>
+        <p>Rust has no exceptions. Errors are <em>values</em>. The type system forces you to handle them. This removes whole categories of bugs (uncaught exceptions in prod).</p>
+        <p>The two core types: <code>Option&lt;T&gt;</code> for "might not exist" and <code>Result&lt;T, E&gt;</code> for "might fail".</p>
+<pre><span class="c">// The ? operator: early-return on error, propagating upward</span>
+<span class="k">fn</span> <span class="n">read_username</span>() -> <span class="t">Result</span>&lt;<span class="t">String</span>, <span class="t">std::io::Error</span>&gt; {
+    <span class="k">let</span> <span class="k">mut</span> <span class="v">s</span> = <span class="t">String</span>::<span class="n">new</span>();
+    <span class="t">std::fs::File</span>::<span class="n">open</span>(<span class="s">"user.txt"</span>)?.<span class="n">read_to_string</span>(&<span class="k">mut</span> <span class="v">s</span>)?;
+    <span class="c">// ? desugars to: match result { Ok(v) => v, Err(e) => return Err(e.into()) }</span>
+    <span class="t">Ok</span>(<span class="v">s</span>)
+}</pre>
+        <p>For real projects, use the ecosystem crates:</p>
+        <table class="cmp-table">
+          <tr><th>Crate</th><th>For</th><th>How</th></tr>
+          <tr><td><code>thiserror</code></td><td>Libraries — define your error type</td><td><code>#[derive(thiserror::Error)]</code> on an enum; each variant gets a message. Keeps your public API clean.</td></tr>
+          <tr><td><code>anyhow</code></td><td>Applications — propagate any error</td><td><code>Result&lt;T, anyhow::Error&gt;</code> in your main / handlers. Any error can be converted automatically.</td></tr>
+        </table>
+<pre><span class="c">// thiserror — define your error enum (used in libraries)</span>
+<span class="kw">use</span> thiserror::Error;
+<span class="kw">#[derive(Debug, Error)]</span>
+<span class="kw">enum</span> <span class="t">TokenizeError</span> {
+    <span class="kw">#[error("unexpected character: {0}")]</span>
+    <span class="t">UnexpectedChar</span>(<span class="t">char</span>),
+    <span class="kw">#[error("unterminated string literal at position {pos}")]</span>
+    <span class="t">UnterminatedString</span> { <span class="v">pos</span>: <span class="t">usize</span> },
+}</pre>
+
+        <div class="sh" id="w2-hashmap">HashMap from scratch — the Week 2 project</div>
+        <p>This is your centerpiece portfolio project. Building it teaches every Week 2 concept in combination: generics (<code>K</code>, <code>V</code>), trait bounds (<code>K: Hash + Eq</code>), ownership (who owns the keys and values), and error handling (index out of bounds).</p>
+<pre><span class="kw">use</span> std::collections::hash_map::DefaultHasher;
+<span class="kw">use</span> std::hash::{Hash, Hasher};
+
+<span class="kw">struct</span> <span class="t">MyHashMap</span>&lt;<span class="t">K</span>, <span class="t">V</span>&gt; {
+    buckets: <span class="t">Vec</span>&lt;<span class="t">Vec</span>&lt;(<span class="t">K</span>, <span class="t">V</span>)&gt;&gt;,
+    len: <span class="t">usize</span>,
+}
+
+<span class="kw">impl</span>&lt;<span class="t">K</span>: <span class="t">Hash</span> + <span class="t">Eq</span>, <span class="t">V</span>&gt; <span class="t">MyHashMap</span>&lt;<span class="t">K</span>, <span class="t">V</span>&gt; {
+    <span class="k">fn</span> <span class="n">new</span>() -> <span class="k">Self</span> {
+        <span class="k">let</span> <span class="v">cap</span> = <span class="num">16</span>;
+        <span class="t">Self</span> { buckets: (<span class="num">0</span>..<span class="v">cap</span>).<span class="n">map</span>(|_| <span class="t">Vec</span>::<span class="n">new</span>()).<span class="n">collect</span>(), len: <span class="num">0</span> }
+    }
+
+    <span class="k">fn</span> <span class="n">bucket_index</span>(&<span class="k">self</span>, <span class="v">key</span>: &<span class="t">K</span>) -> <span class="t">usize</span> {
+        <span class="k">let</span> <span class="k">mut</span> <span class="v">h</span> = <span class="t">DefaultHasher</span>::<span class="n">new</span>();
+        <span class="v">key</span>.<span class="n">hash</span>(&<span class="k">mut</span> <span class="v">h</span>);
+        (<span class="v">h</span>.<span class="n">finish</span>() <span class="k">as</span> <span class="t">usize</span>) % <span class="k">self</span>.<span class="v">buckets</span>.<span class="n">len</span>()
+    }
+
+    <span class="k">fn</span> <span class="n">insert</span>(&<span class="k">mut</span> <span class="k">self</span>, <span class="v">key</span>: <span class="t">K</span>, <span class="v">val</span>: <span class="t">V</span>) {
+        <span class="k">if</span> <span class="k">self</span>.<span class="n">load_factor</span>() > <span class="num">0.75</span> { <span class="k">self</span>.<span class="n">rehash</span>(); }
+        <span class="k">let</span> <span class="v">idx</span> = <span class="k">self</span>.<span class="n">bucket_index</span>(&<span class="v">key</span>);
+        <span class="c">// if key exists, overwrite; otherwise push</span>
+        <span class="k">for</span> (<span class="v">k</span>, <span class="v">v</span>) <span class="k">in</span> &<span class="k">mut</span> <span class="k">self</span>.<span class="v">buckets</span>[<span class="v">idx</span>] {
+            <span class="k">if</span> <span class="v">k</span> == &<span class="v">key</span> { *<span class="v">v</span> = <span class="v">val</span>; <span class="k">return</span>; }
+        }
+        <span class="k">self</span>.<span class="v">buckets</span>[<span class="v">idx</span>].<span class="n">push</span>((<span class="v">key</span>, <span class="v">val</span>));
+        <span class="k">self</span>.<span class="v">len</span> += <span class="num">1</span>;
+    }
+    <span class="c">// load_factor, get, remove, rehash left as exercise</span>
+}</pre>
+        <div class="callout info">
+          <span class="callout-icon">ℹ</span>
+          <div class="callout-body"><p>The real <code>std::collections::HashMap</code> uses <strong>Robin Hood hashing</strong> (open addressing) with the <strong>hashbrown</strong> library under the hood. Your chaining implementation is simpler and easier to reason about for learning — and understanding the tradeoffs (chaining vs open addressing, load factor, worst-case O(n) vs amortised O(1)) is exactly what an interviewer wants to probe.</p></div>
+        </div>
+
+        <div class="res-row">
+          <a class="res-link" href="https://rust-book.cs.brown.edu/ch10-00-generics.html" target="_blank">Book Ch. 10 — Generics, Traits, Lifetimes</a>
+          <a class="res-link" href="https://docs.rs/thiserror/latest/thiserror/" target="_blank">docs.rs/thiserror</a>
+          <a class="res-link" href="https://docs.rs/anyhow/latest/anyhow/" target="_blank">docs.rs/anyhow</a>
+          <a class="res-link" href="https://doc.rust-lang.org/std/collections/struct.HashMap.html" target="_blank">std HashMap docs</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WEEK 3 ── -->
+    <div class="lesson" id="w3">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(240,129,63,.12);color:var(--rust-bright);border:1px solid rgba(240,129,63,.28);">WK 3</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Iterators, Smart Pointers & Modules</div>
+          <div class="lesson-subtitle">Idiomatic Rust — this is what real Rust code looks like</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="sh" id="w3-iterators">Closures & the Iterator trait</div>
+        <p>Rust's iterators are <em>lazy</em>: a chain like <code>.map().filter()</code> creates no intermediate collections — it describes a sequence of operations to be run only when consumed by a <code>collect()</code>, <code>for</code>, <code>sum()</code>, etc. This makes idiomatic Rust <em>faster</em> than equivalent loop code, not slower.</p>
+<pre><span class="k">let</span> <span class="v">numbers</span> = <span class="kw">vec!</span>[<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>];
+
+<span class="c">// Imperative style — allocates a new Vec for each step</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="v">evens</span> = <span class="t">Vec</span>::<span class="n">new</span>();
+<span class="k">for</span> <span class="v">n</span> <span class="k">in</span> &<span class="v">numbers</span> {
+    <span class="k">if</span> <span class="v">n</span> % <span class="num">2</span> == <span class="num">0</span> { <span class="v">evens</span>.<span class="n">push</span>(<span class="v">n</span> * <span class="num">2</span>); }
+}
+
+<span class="c">// Iterator style — lazy, one pass, zero intermediate Vecs</span>
+<span class="k">let</span> <span class="v">evens</span>: <span class="t">Vec</span>&lt;_&gt; = <span class="v">numbers</span>.<span class="n">iter</span>()
+    .<span class="n">filter</span>(|&&<span class="v">n</span>| <span class="v">n</span> % <span class="num">2</span> == <span class="num">0</span>)
+    .<span class="n">map</span>(|&<span class="v">n</span>| <span class="v">n</span> * <span class="num">2</span>)
+    .<span class="n">collect</span>();  <span class="c">// type annotation drives collect() — it returns Vec, HashSet, String, etc.</span></pre>
+
+        <p>The three iterator methods you'll reach for constantly:</p>
+        <div class="concept-row">
+          <div class="concept-card">
+            <div class="cc-title">Transforming</div>
+            <p><code>.map(f)</code> — transform each element<br><code>.flat_map(f)</code> — map then flatten<br><code>.enumerate()</code> — add index<br><code>.zip(other)</code> — pair with another iterator</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Filtering</div>
+            <p><code>.filter(pred)</code> — keep matching elements<br><code>.filter_map(f)</code> — map + filter in one pass<br><code>.take(n)</code> / <code>.skip(n)</code><br><code>.take_while(pred)</code></p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Consuming (terminators)</div>
+            <p><code>.collect::&lt;T&gt;()</code> — into any collection<br><code>.fold(init, f)</code> / <code>.reduce(f)</code><br><code>.sum()</code> / <code>.product()</code><br><code>.count()</code> / <code>.any()</code> / <code>.all()</code></p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Fn traits (closures)</div>
+            <p><code>Fn</code> — borrows env, callable many times<br><code>FnMut</code> — mutably borrows, may modify env<br><code>FnOnce</code> — consumes env, calls once<br>Rust infers the right variant automatically.</p>
+          </div>
+        </div>
+
+        <div class="sh" id="w3-smartptr">Smart pointers — Box, Rc, RefCell</div>
+        <p>The ownership system is strict: one owner, one mutable reference. Sometimes you legitimately need to escape these constraints. Smart pointers are the principled escape hatches.</p>
+        <table class="cmp-table">
+          <tr><th>Type</th><th>What it gives you</th><th>When to use</th></tr>
+          <tr><td><code>Box&lt;T&gt;</code></td><td>Heap allocation. Single owner. No runtime overhead beyond the indirection.</td><td>Large data you don't want on the stack. Recursive types (e.g. linked list). Trait objects (<code>Box&lt;dyn Trait&gt;</code>).</td></tr>
+          <tr><td><code>Rc&lt;T&gt;</code></td><td>Reference-counted shared ownership. Multiple owners. <strong>Single-threaded only.</strong></td><td>Graph structures. UI trees. Anything where multiple parts of the code need shared read access in a single thread.</td></tr>
+          <tr><td><code>Arc&lt;T&gt;</code></td><td>Atomic Rc — thread-safe shared ownership. Slightly more expensive than Rc due to atomic ops.</td><td>Same use cases as Rc but across threads. The <code>A</code> stands for Atomic.</td></tr>
+          <tr><td><code>RefCell&lt;T&gt;</code></td><td><em>Interior mutability</em>: moves borrow checking from compile time to runtime. Use <code>.borrow()</code> / <code>.borrow_mut()</code>. Panics if rules violated.</td><td>When you need to mutate through a shared reference. Often paired as <code>Rc&lt;RefCell&lt;T&gt;&gt;</code>.</td></tr>
+          <tr><td><code>Mutex&lt;T&gt;</code></td><td>Interior mutability across threads. Blocks until lock acquired.</td><td>Shared mutable state across threads. Pair with <code>Arc</code>: <code>Arc&lt;Mutex&lt;T&gt;&gt;</code>.</td></tr>
+        </table>
+<pre><span class="c">// Recursive type requires Box — otherwise infinite size</span>
+<span class="kw">enum</span> <span class="t">List</span> {
+    <span class="t">Cons</span>(<span class="t">i32</span>, <span class="t">Box</span>&lt;<span class="t">List</span>&gt;),  <span class="c">// Box breaks the recursive size problem</span>
+    <span class="t">Nil</span>,
+}
+
+<span class="c">// Shared mutable state (single-threaded)</span>
+<span class="k">let</span> <span class="v">shared</span> = <span class="t">Rc</span>::<span class="n">new</span>(<span class="t">RefCell</span>::<span class="n">new</span>(<span class="kw">vec!</span>[<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]));
+<span class="k">let</span> <span class="v">clone1</span> = <span class="t">Rc</span>::<span class="n">clone</span>(&<span class="v">shared</span>);
+<span class="v">clone1</span>.<span class="n">borrow_mut</span>().<span class="n">push</span>(<span class="num">4</span>);  <span class="c">// runtime borrow check — panics if already borrowed</span></pre>
+        <div class="callout danger">
+          <span class="callout-icon">⚡</span>
+          <div class="callout-body"><p><strong>Never hold a <code>std::sync::Mutex</code> lock across an <code>.await</code> point</strong> in async code — the lock might be held while the thread is running other tasks, causing a deadlock. Use <code>tokio::sync::Mutex</code> instead for async contexts (Week 4).</p></div>
+        </div>
+
+        <div class="sh" id="w3-modules">Modules, crates & workspaces</div>
+        <p>The Rust module system maps directly to the filesystem:</p>
+<pre><span class="c">src/
+  main.rs          ← binary root; declares modules
+  lib.rs           ← library root (if a dual crate)
+  hashmap/
+    mod.rs         ← OR: src/hashmap.rs for a single-file module
+    bucket.rs      ← sub-module</span>
+
+<span class="c">// In main.rs:</span>
+<span class="kw">mod</span> hashmap;           <span class="c">// loads src/hashmap/mod.rs or src/hashmap.rs</span>
+<span class="kw">use</span> hashmap::MyHashMap; <span class="c">// bring into scope</span>
+
+<span class="c">// Visibility:</span>
+<span class="k">pub</span> <span class="k">fn</span> <span class="n">public_fn</span>()   {}   <span class="c">// visible outside the module</span>
+<span class="k">pub</span>(<span class="k">crate</span>) <span class="k">fn</span> <span class="n">internal</span>() {} <span class="c">// visible within this crate only</span>
+<span class="k">fn</span> <span class="n">private_fn</span>()      {}   <span class="c">// private to this module</span></pre>
+        <p>A <strong>crate</strong> is a compilation unit (a library or binary). A <strong>workspace</strong> is a Cargo.toml at the root listing multiple crates — useful when your project grows beyond one crate.</p>
+        <p><strong>Documentation comments</strong>: use <code>///</code> for item docs and <code>//!</code> for module/crate docs. They support Markdown. Run <code>cargo doc --open</code> to see rendered docs. Writing good <code>///</code> doc comments with example code blocks is a real professional signal.</p>
+
+        <div class="res-row">
+          <a class="res-link" href="https://rust-book.cs.brown.edu/ch13-00-functional-features.html" target="_blank">Book Ch. 13 — Iterators & Closures</a>
+          <a class="res-link" href="https://rust-book.cs.brown.edu/ch15-00-smart-pointers.html" target="_blank">Book Ch. 15 — Smart Pointers</a>
+          <a class="res-link" href="https://docs.rs/clap/latest/clap/" target="_blank">docs.rs/clap — CLI framework</a>
+          <a class="res-link" href="https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html" target="_blank">Book Ch. 7 — Modules</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PHASE 2 ══════════ -->
+    <div class="phase-divider" id="phase2">
+      <div class="phase-divider-line"></div>
+      <div class="phase-divider-badge ph2">Phase 2 · Async & Networking · Weeks 4–5</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- ── WEEK 4 ── -->
+    <div class="lesson" id="w4">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(79,176,160,.12);color:var(--patina);border:1px solid rgba(79,176,160,.28);">WK 4</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Concurrency & Async Foundations</div>
+          <div class="lesson-subtitle">Threads, Send/Sync, async/await, Tokio</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="week-intro">Phase 2 is where the Phase 1 theory pays off. The ownership model directly enables <strong>fearless concurrency</strong> — data races become compile errors.</div>
+
+        <div class="sh" id="w4-threads">OS threads & shared state</div>
+        <p>Rust's threading model is standard OS threads, not green threads. The ownership system's constraint on <code>&mut</code> references means sharing mutable data between threads requires explicit synchronisation primitives — and the type system enforces it.</p>
+<pre><span class="k">use</span> std::sync::{Arc, Mutex};
+<span class="k">use</span> std::thread;
+
+<span class="k">let</span> <span class="v">counter</span> = <span class="t">Arc</span>::<span class="n">new</span>(<span class="t">Mutex</span>::<span class="n">new</span>(<span class="num">0</span>));
+<span class="k">let</span> <span class="k">mut</span> <span class="v">handles</span> = <span class="kw">vec!</span>[];
+
+<span class="k">for</span> _ <span class="k">in</span> <span class="num">0</span>..<span class="num">10</span> {
+    <span class="k">let</span> <span class="v">c</span> = <span class="t">Arc</span>::<span class="n">clone</span>(&<span class="v">counter</span>);
+    <span class="v">handles</span>.<span class="n">push</span>(thread::spawn(<span class="k">move</span> || {  <span class="c">// `move` captures c by value</span>
+        <span class="k">let</span> <span class="k">mut</span> <span class="v">n</span> = <span class="v">c</span>.<span class="n">lock</span>().<span class="n">unwrap</span>();    <span class="c">// acquire lock — blocks until available</span>
+        *<span class="v">n</span> += <span class="num">1</span>;                           <span class="c">// lock released when `n` drops</span>
+    }));
+}
+<span class="k">for</span> <span class="v">h</span> <span class="k">in</span> <span class="v">handles</span> { <span class="v">h</span>.<span class="n">join</span>().<span class="n">unwrap</span>(); }
+<span class="n">println!</span>(<span class="s">"counter = {}"</span>, *<span class="v">counter</span>.<span class="n">lock</span>().<span class="n">unwrap</span>()); <span class="c">// 10</span></pre>
+
+        <div class="sh">Send and Sync — the thread safety markers</div>
+        <table class="cmp-table">
+          <tr><th>Trait</th><th>Meaning</th><th>Implemented by</th></tr>
+          <tr><td><code>Send</code></td><td>Safe to <em>move</em> ownership to another thread</td><td>Almost everything except <code>Rc</code> (non-atomic ref count) and raw pointers</td></tr>
+          <tr><td><code>Sync</code></td><td>Safe to share a <em>reference</em> across threads (i.e. <code>&T</code> is <code>Send</code>)</td><td>Everything that has no interior mutability, or uses thread-safe interior mutability (Mutex)</td></tr>
+        </table>
+        <p><code>Rc</code> is not <code>Send</code> — if you try to send an <code>Rc</code> to a thread the compiler rejects it. This is why <code>Arc</code> exists. These traits are checked by the compiler: if your type contains any non-<code>Send</code> field, your type won't be <code>Send</code> either — automatically propagated.</p>
+
+        <div class="sh" id="w4-async">The async/await model</div>
+        <p>OS threads are expensive (8 MB stack each; kernel context-switch). For I/O-bound work (waiting on network, disk) most of that time is just waiting. Async lets you run <em>millions</em> of concurrent tasks on a handful of OS threads by suspending waiting tasks and running ready ones.</p>
+        <p>The key mental model for Rust async:</p>
+        <div class="model-box"><span class="hl">async fn fetch_data() -> String { ... }</span>
+
+Does NOT execute immediately.
+Returns a <span class="hl2">Future&lt;Output = String&gt;</span> — a state machine that knows
+how to make progress when polled.
+
+<span class="hl3">Futures are LAZY.</span>  Nothing runs until a runtime polls the Future.
+
+<span class="dim">Timeline:</span>
+  call async fn  →  get a Future (no work done)
+      .await     →  "drive this Future to completion; yield if it's waiting"
+  runtime polls  →  Future runs until it would block, then suspends</div>
+
+<pre><span class="c">// async fn creates a Future (a state machine)</span>
+<span class="k">async fn</span> <span class="n">fetch_url</span>(<span class="v">url</span>: &<span class="t">str</span>) -> <span class="t">String</span> {
+    <span class="k">let</span> <span class="v">body</span> = reqwest::<span class="n">get</span>(<span class="v">url</span>).<span class="k">await</span>.<span class="n">unwrap</span>()
+        .<span class="n">text</span>().<span class="k">await</span>.<span class="n">unwrap</span>();
+    <span class="v">body</span>  <span class="c">// .await suspends here while waiting for the HTTP response</span>
+}     <span class="c">// during that wait, the runtime can run OTHER futures on the same thread</span>
+
+<span class="c">// Run multiple concurrently with tokio::join!</span>
+<span class="k">let</span> (<span class="v">a</span>, <span class="v">b</span>) = tokio::<span class="n">join!</span>(<span class="n">fetch_url</span>(<span class="s">"http://a.com"</span>), <span class="n">fetch_url</span>(<span class="s">"http://b.com"</span>));
+<span class="c">// Both are running concurrently — the runtime interleaves them at .await points</span></pre>
+
+        <div class="sh" id="w4-tokio">Tokio — the async runtime</div>
+        <p>The Rust standard library defines the <code>Future</code> trait but provides no runtime. Tokio is the de-facto standard runtime (as of 2025, async-std is effectively deprecated). Tokio provides: an async task scheduler, async I/O (TCP, UDP, files), timers, and sync primitives.</p>
+<pre><span class="c">// #[tokio::main] expands to: set up the runtime, run this async fn, block until done</span>
+<span class="kw">#[tokio::main]</span>
+<span class="k">async fn</span> <span class="n">main</span>() {
+    <span class="c">// tokio::spawn — fire-and-forget task (like a thread but cheap)</span>
+    <span class="k">let</span> <span class="v">handle</span> = tokio::task::<span class="n">spawn</span>(<span class="k">async</span> {
+        <span class="c">// runs concurrently</span>
+    });
+
+    <span class="c">// tokio::select! — race multiple futures, take the first to complete</span>
+    tokio::<span class="n">select!</span> {
+        <span class="v">result</span> = <span class="n">some_future</span>() => { ... }
+        _ = tokio::time::<span class="n">sleep</span>(Duration::<span class="n">from_secs</span>(<span class="num">5</span>)) => { <span class="n">eprintln!</span>(<span class="s">"timeout"</span>); }
+    }
+
+    <span class="v">handle</span>.<span class="k">await</span>.<span class="n">unwrap</span>();
+}</pre>
+        <div class="concept-row">
+          <div class="concept-card">
+            <div class="cc-title">tokio::sync::mpsc</div>
+            <p>Multi-producer, single-consumer channel. Use for sending work from many tasks to one consumer. Prefer over <code>std::sync::mpsc</code> in async code.</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">tokio::sync::broadcast</div>
+            <p>One sender, many receivers — each gets every message. Perfect for the Week 4 chat server: broadcast incoming messages to all connected clients.</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">tokio::sync::Mutex</div>
+            <p>Like std Mutex but <code>.await</code>-aware. Use when you need to hold a lock across an <code>.await</code> point. Otherwise <code>std::sync::Mutex</code> is fine (and faster).</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">tokio::time</div>
+            <p><code>sleep(Duration)</code>, <code>timeout(dur, future)</code>, <code>interval(dur)</code>. Essential for retry logic, health checks, and any time-bounded operation.</p>
+          </div>
+        </div>
+
+        <div class="interview-q">
+          <div class="iq-label">Interview Q</div>
+          <p>Why are Rust futures lazy? What does this enable?</p>
+          <div class="answer">Answer: A future only runs when polled by a runtime. This means constructing a future is zero-cost — no work begins until you explicitly drive it. This enables: composing futures without running them (chaining with combinators), cancellation by simply dropping a future, and efficient runtimes that only poll futures that have registered a wakeup (no busy-waiting). Contrast with eager async (e.g. JS Promises), where the work starts immediately on construction.</div>
+        </div>
+
+        <div class="res-row">
+          <a class="res-link" href="https://tokio.rs/tokio/tutorial" target="_blank">Tokio tutorial</a>
+          <a class="res-link" href="https://marabos.nl/atomics/" target="_blank">Rust Atomics and Locks (free book)</a>
+          <a class="res-link" href="https://rust-lang.github.io/async-book/" target="_blank">The Async Book</a>
+          <a class="res-link" href="https://www.youtube.com/watch?v=ThjvMReOXYM" target="_blank">Crust of Rust: async/await (YouTube)</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WEEK 5 ── -->
+    <div class="lesson" id="w5">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(79,176,160,.12);color:var(--patina);border:1px solid rgba(79,176,160,.28);">WK 5</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Network Programming & Backend Services</div>
+          <div class="lesson-subtitle">axum · serde · sqlx → a deployed Rust backend</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="week-intro">The backend stack: <strong>Tokio</strong> (runtime) → <strong>hyper</strong> (HTTP) → <strong>axum</strong> (framework) → <strong>serde</strong> (JSON) → <strong>sqlx</strong> (database). You work at the axum level; the rest is beneath you.</div>
+
+        <div class="sh" id="w5-axum">axum — the modern Rust web framework</div>
+        <p>axum (from the Tokio team) is built on <code>hyper</code> and <code>tower</code>. Its design is <em>type-driven</em>: handlers are async functions whose arguments are <em>extractors</em> — types that parse the request. If a request can't satisfy the extraction, axum returns a 400 automatically.</p>
+<pre><span class="k">use</span> axum::{routing::{get, post}, Router, Json, extract::{Path, State}};
+<span class="k">use</span> std::sync::Arc;
+
+<span class="kw">#[tokio::main]</span>
+<span class="k">async fn</span> <span class="n">main</span>() {
+    <span class="k">let</span> <span class="v">state</span> = <span class="t">Arc</span>::<span class="n">new</span>(<span class="n">AppState</span>::<span class="n">new</span>());
+
+    <span class="k">let</span> <span class="v">app</span> = <span class="t">Router</span>::<span class="n">new</span>()
+        .<span class="n">route</span>(<span class="s">"/health"</span>, get(health_handler))
+        .<span class="n">route</span>(<span class="s">"/users/:id"</span>, get(get_user))
+        .<span class="n">route</span>(<span class="s">"/users"</span>, post(create_user))
+        .<span class="n">with_state</span>(<span class="v">state</span>);
+
+    axum::serve(<span class="n">tokio::net::TcpListener</span>::<span class="n">bind</span>(<span class="s">"0.0.0.0:3000"</span>).<span class="k">await</span>.<span class="n">unwrap</span>(), <span class="v">app</span>)
+        .<span class="k">await</span>.<span class="n">unwrap</span>();
+}
+
+<span class="c">// Extractors in the signature: axum parses them automatically</span>
+<span class="k">async fn</span> <span class="n">get_user</span>(
+    <span class="t">Path</span>(<span class="v">id</span>): <span class="t">Path</span>&lt;<span class="t">u64</span>&gt;,          <span class="c">// extracts :id from path</span>
+    <span class="t">State</span>(<span class="v">state</span>): <span class="t">State</span>&lt;<span class="t">Arc</span>&lt;<span class="t">AppState</span>&gt;&gt;,  <span class="c">// shared application state</span>
+) -> <span class="t">Json</span>&lt;<span class="t">User</span>&gt; {
+    <span class="t">Json</span>(<span class="v">state</span>.<span class="n">find_user</span>(<span class="v">id</span>).<span class="k">await</span>)
+}</pre>
+
+        <div class="sh" id="w5-serde">serde — serialization/deserialization</div>
+        <p>serde is arguably the most important library in the Rust ecosystem. It defines a serialization <em>data model</em> (a set of types that any format can map to/from) and uses proc-macros to generate efficient ser/de code at compile time. Zero runtime reflection — it's all code gen.</p>
+<pre><span class="k">use</span> serde::{Deserialize, Serialize};
+
+<span class="kw">#[derive(Debug, Serialize, Deserialize)]</span>
+<span class="kw">struct</span> <span class="t">User</span> {
+    id: <span class="t">u64</span>,
+    name: <span class="t">String</span>,
+    <span class="kw">#[serde(skip_serializing_if = "Option::is_none")]</span>  <span class="c">// omit from JSON if None</span>
+    email: <span class="t">Option</span>&lt;<span class="t">String</span>&gt;,
+    <span class="kw">#[serde(rename = "created_at")]</span>                   <span class="c">// different JSON key name</span>
+    created: <span class="t">u64</span>,
+}
+
+<span class="c">// Serialize to JSON string</span>
+<span class="k">let</span> <span class="v">json</span> = serde_json::<span class="n">to_string</span>(&<span class="v">user</span>)?;
+
+<span class="c">// Deserialize from JSON bytes (e.g. from an HTTP body)</span>
+<span class="k">let</span> <span class="v">user</span>: <span class="t">User</span> = serde_json::<span class="n">from_slice</span>(&<span class="v">body_bytes</span>)?;
+
+<span class="c">// axum's Json extractor does this automatically — the type annotation is the instruction</span>
+<span class="k">async fn</span> <span class="n">create_user</span>(<span class="t">Json</span>(<span class="v">payload</span>): <span class="t">Json</span>&lt;<span class="t">CreateUserRequest</span>&gt;) -> ... { ... }</pre>
+
+        <div class="sh" id="w5-sqlx">sqlx — compile-time checked SQL</div>
+        <p>sqlx's key selling point: the <code>query!</code> and <code>query_as!</code> macros verify your SQL against the actual database schema <em>at compile time</em>. Typos in column names become compiler errors, not runtime panics in production.</p>
+<pre><span class="c">// sqlx with SQLite — set DATABASE_URL env var for compile-time check</span>
+<span class="k">use</span> sqlx::SqlitePool;
+
+<span class="k">async fn</span> <span class="n">get_user_by_id</span>(<span class="v">pool</span>: &<span class="t">SqlitePool</span>, <span class="v">id</span>: <span class="t">i64</span>) -> <span class="t">sqlx::Result</span>&lt;<span class="t">User</span>&gt; {
+    <span class="c">// query_as! maps rows directly to your struct — column names must match field names</span>
+    <span class="n">sqlx::query_as!</span>(<span class="t">User</span>, <span class="s">"SELECT id, name, email FROM users WHERE id = ?"</span>, <span class="v">id</span>)
+        .<span class="n">fetch_one</span>(<span class="v">pool</span>)
+        .<span class="k">await</span>
+}
+
+<span class="c">// Migrations live in migrations/ directory, run via sqlx-cli or at startup:</span>
+<span class="n">sqlx::migrate!</span>().<span class="n">run</span>(&<span class="v">pool</span>).<span class="k">await</span>?;  <span class="c">// applies pending migrations</span></pre>
+
+        <div class="callout info">
+          <span class="callout-icon">ℹ</span>
+          <div class="callout-body"><p>The compile-time query check requires a real database to be present during compilation (or a cached <code>.sqlx/</code> directory). Set <code>DATABASE_URL</code> in your <code>.env</code> file and run <code>sqlx prepare</code> before CI to cache the checks offline.</p></div>
+        </div>
+
+        <div class="sh">Deploying — multi-stage Docker + Shuttle/Fly</div>
+<pre><span class="c"># Multi-stage Dockerfile for a tiny Rust binary image</span>
+FROM rust:1.85 AS builder
+WORKDIR /app
+COPY . .
+RUN cargo build --release
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/my-api /usr/local/bin/
+CMD ["my-api"]
+<span class="c"># Result: ~50-100 MB image vs ~1.5 GB if you shipped the builder</span></pre>
+        <p>Free deployment options for your portfolio: <strong>Shuttle.rs</strong> (Rust-native, easiest), <strong>Fly.io</strong> (good free tier, Dockerfile-based), <strong>Railway</strong> (good DX).</p>
+
+        <div class="res-row">
+          <a class="res-link" href="https://docs.rs/axum/latest/axum/" target="_blank">docs.rs/axum</a>
+          <a class="res-link" href="https://serde.rs" target="_blank">serde.rs</a>
+          <a class="res-link" href="https://docs.rs/sqlx/latest/sqlx/" target="_blank">docs.rs/sqlx</a>
+          <a class="res-link" href="https://docs.rs/tracing/latest/tracing/" target="_blank">docs.rs/tracing</a>
+          <a class="res-link" href="https://shuttle.rs" target="_blank">shuttle.rs</a>
+          <a class="res-link" href="https://zero2prod.com" target="_blank">Zero to Production in Rust (book)</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PHASE 3 ══════════ -->
+    <div class="phase-divider" id="phase3">
+      <div class="phase-divider-line"></div>
+      <div class="phase-divider-badge ph3">Phase 3 · WASM & Developer Tooling · Weeks 6–8</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- ── WEEK 6 ── -->
+    <div class="lesson" id="w6">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(210,98,46,.12);color:var(--rust);border:1px solid rgba(210,98,46,.28);">WK 6</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">WebAssembly in the Browser</div>
+          <div class="lesson-subtitle">wasm-bindgen · wasm-pack · web-sys · Game of Life</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="sh" id="w6-wasm">What WebAssembly is and why Rust</div>
+        <p>WebAssembly (WASM) is a binary instruction format that runs in a sandboxed virtual machine. Browsers, Node.js, and standalone runtimes can execute it. It's not a replacement for JavaScript — it's a compilation target for languages that need predictable performance in environments that can run WASM.</p>
+        <table class="cmp-table">
+          <tr><th></th><th>JavaScript</th><th>Rust-WASM</th></tr>
+          <tr><td><strong>Startup</strong></td><td>Fast; JIT-compiled over time</td><td>Slightly slower initial parse; then predictable</td></tr>
+          <tr><td><strong>Peak perf</strong></td><td>JIT good but GC pauses visible</td><td>Predictable, no GC — often 2–5× faster for compute-heavy tasks</td></tr>
+          <tr><td><strong>Binary size</strong></td><td>N/A (not shipped as binary)</td><td>~50 KB–2 MB depending on deps and opt level</td></tr>
+          <tr><td><strong>Sweet spot</strong></td><td>DOM manipulation, light logic</td><td>Image/video processing, parsers, cryptography, physics, compression</td></tr>
+        </table>
+        <p>Rust is the top WASM language because: no runtime to ship (no GC, no allocator overhead by default), tiny binaries, excellent <code>wasm-bindgen</code> tooling, and the safety guarantees carry over to the browser context.</p>
+
+        <div class="sh">The WASM build pipeline</div>
+<pre><span class="c"># Add the WASM target</span>
+rustup target add wasm32-unknown-unknown
+
+<span class="c"># Install wasm-pack (builds + generates JS bindings)</span>
+cargo install wasm-pack
+
+<span class="c"># Cargo.toml for a WASM lib crate:</span>
+[lib]
+crate-type = ["cdylib"]  <span class="c"># C-compatible dynamic library — required for WASM</span>
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+<span class="c"># Build for web (generates .wasm + JS glue + TypeScript types)</span>
+wasm-pack build --target web</pre>
+
+        <div class="sh" id="w6-bindgen">wasm-bindgen — the JS↔Rust bridge</div>
+        <p><code>wasm-bindgen</code> generates the glue code that lets JavaScript call Rust functions and vice versa. The boundary is the key concept to understand: <strong>crossing the JS↔WASM boundary has a cost</strong> because WASM's linear memory and JavaScript's heap are separate. Every value that crosses the boundary must be copied and potentially converted (Rust's UTF-8 strings vs JS's UTF-16).</p>
+<pre><span class="k">use</span> wasm_bindgen::prelude::*;
+
+<span class="c">// Exported to JavaScript</span>
+<span class="kw">#[wasm_bindgen]</span>
+<span class="k">pub fn</span> <span class="n">greet</span>(<span class="v">name</span>: &<span class="t">str</span>) -> <span class="t">String</span> {
+    <span class="n">format!</span>(<span class="s">"Hello, {}!"</span>, <span class="v">name</span>)
+}
+
+<span class="c">// Export a struct with methods</span>
+<span class="kw">#[wasm_bindgen]</span>
+<span class="k">pub</span> <span class="kw">struct</span> <span class="t">ImageProcessor</span> { <span class="v">data</span>: <span class="t">Vec</span>&lt;<span class="t">u8</span>&gt; }
+
+<span class="kw">#[wasm_bindgen]</span>
+<span class="kw">impl</span> <span class="t">ImageProcessor</span> {
+    <span class="kw">#[wasm_bindgen(constructor)]</span>
+    <span class="k">pub fn</span> <span class="n">new</span>(<span class="v">width</span>: <span class="t">u32</span>, <span class="v">height</span>: <span class="t">u32</span>) -> <span class="t">Self</span> { ... }
+
+    <span class="c">// Takes a JS Uint8Array by passing a pointer into WASM memory</span>
+    <span class="k">pub fn</span> <span class="n">grayscale</span>(&<span class="k">mut</span> <span class="k">self</span>) { ... }
+
+    <span class="c">// Returns pointer to internal buffer — JS reads directly, no copy</span>
+    <span class="k">pub fn</span> <span class="n">as_ptr</span>(&<span class="k">self</span>) -> *<span class="k">const</span> <span class="t">u8</span> { <span class="k">self</span>.<span class="v">data</span>.<span class="n">as_ptr</span>() }
+}</pre>
+
+        <div class="callout tip">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body"><p><strong>Minimise boundary crossings.</strong> Instead of calling a Rust function per pixel, pass the entire image buffer once, let Rust process it, and read the result back once. The cost of one coarse-grained call vastly outweighs many fine-grained ones.</p></div>
+        </div>
+
+        <div class="sh">Shrinking the binary</div>
+<pre><span class="c"># Cargo.toml — release profile optimised for WASM</span>
+[profile.release]
+opt-level = "z"   <span class="c"># optimise for size (not "3" which optimises for speed)</span>
+lto       = true  <span class="c"># link-time optimisation — eliminates dead code across crates</span>
+strip     = true  <span class="c"># strip debug symbols</span>
+
+<span class="c"># After build, run wasm-opt for further savings</span>
+wasm-opt -Oz -o output_opt.wasm output.wasm
+
+<span class="c"># Inspect what's taking space</span>
+cargo install twiggy
+twiggy top output.wasm</pre>
+
+        <div class="res-row">
+          <a class="res-link" href="https://rustwasm.github.io/docs/book/" target="_blank">Rust and WebAssembly Book</a>
+          <a class="res-link" href="https://rustwasm.github.io/wasm-bindgen/" target="_blank">wasm-bindgen guide</a>
+          <a class="res-link" href="https://docs.rs/web-sys/latest/web_sys/" target="_blank">docs.rs/web-sys</a>
+          <a class="res-link" href="https://trunkrs.dev" target="_blank">trunkrs.dev — WASM bundler</a>
+          <a class="res-link" href="https://developer.mozilla.org/en-US/docs/WebAssembly" target="_blank">MDN WebAssembly</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WEEK 7 ── -->
+    <div class="lesson" id="w7">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(210,98,46,.12);color:var(--rust);border:1px solid rgba(210,98,46,.28);">WK 7</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Server-Side WASM, WASI & Macros</div>
+          <div class="lesson-subtitle">Wasmtime · Component Model · macro_rules! · proc-macros</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="sh" id="w7-wasi">WASI — WASM beyond the browser</div>
+        <p>WASI (WebAssembly System Interface) is a standard set of syscalls that gives WASM modules sandboxed access to the host: files, environment variables, clocks, sockets. The promise: compile once, run sandboxed anywhere that has a WASI runtime.</p>
+        <table class="cmp-table">
+          <tr><th></th><th>WASI preview1 (wasip1)</th><th>WASI preview2 (wasip2)</th></tr>
+          <tr><td><strong>Status</strong></td><td>Tier 2 stable in Rust — <code>wasm32-wasip1</code></td><td>Tier 2 — <code>wasm32-wasip2</code></td></tr>
+          <tr><td><strong>Networking</strong></td><td>Files/env only, no sockets</td><td>Adds sockets (WASI sockets spec)</td></tr>
+          <tr><td><strong>Use</strong></td><td>CLI tools, serverless, plugins</td><td>Network services, edge compute</td></tr>
+        </table>
+<pre><span class="c"># Compile a CLI to WASI</span>
+rustup target add wasm32-wasip1
+cargo build --target wasm32-wasip1 --release
+
+<span class="c"># Run with Wasmtime</span>
+wasmtime target/wasm32-wasip1/release/my-cli.wasm -- --help
+<span class="c"># Sandboxed: Wasmtime controls what files/env the WASM module can see</span></pre>
+
+        <div class="sh">The Component Model — portable plugins</div>
+        <p>Plain WASM modules communicate only through integers and floats. The <strong>Component Model</strong> adds a rich type system for the interface: strings, records, enums, options, results — described in <strong>WIT</strong> (WebAssembly Interface Types) files. This enables a WASM component written in Rust to call a component written in Go, with no shared runtime.</p>
+<pre><span class="c">// my-interface.wit — define the component's public API</span>
+package my:example;
+interface greeter {
+    greet: func(name: string) -> string;
+}
+world my-world {
+    export greeter;
+}
+
+<span class="c">// cargo component (cargo install cargo-component) generates Rust bindings</span>
+<span class="c">// then you implement the generated trait:</span>
+<span class="kw">impl</span> <span class="t">Guest</span> <span class="k">for</span> <span class="t">MyComponent</span> {
+    <span class="k">fn</span> <span class="n">greet</span>(<span class="v">name</span>: <span class="t">String</span>) -> <span class="t">String</span> { <span class="n">format!</span>(<span class="s">"Hello, {}!"</span>, <span class="v">name</span>) }
+}</pre>
+        <p>Why this matters for your backend interest: you can build a Rust HTTP service that accepts user-submitted <code>.wasm</code> plugins and executes them sandboxed via Wasmtime. This is how plugin systems at companies like Fastly (Compute@Edge) and Cloudflare (Workers) work. It's the <strong>most impressive portfolio project</strong> in the plan.</p>
+
+        <div class="sh" id="w7-macros">Macros — code that writes code</div>
+        <p>Rust has two kinds of macros. Understanding the difference is important before Week 7:</p>
+        <table class="cmp-table">
+          <tr><th></th><th>Declarative (<code>macro_rules!</code>)</th><th>Procedural (proc-macros)</th></tr>
+          <tr><td><strong>Mechanism</strong></td><td>Pattern matching on token trees — like regex but for code structure</td><td>A Rust program that runs at compile time, receives a token stream, returns a new token stream</td></tr>
+          <tr><td><strong>Powers</strong></td><td><code>vec![...]</code>, <code>println!</code>, test-case generators, mini-DSLs</td><td><code>#[derive(Serialize)]</code>, <code>#[tokio::main]</code>, custom attributes</td></tr>
+          <tr><td><strong>Key crates</strong></td><td>None (built-in)</td><td><code>proc-macro2</code>, <code>syn</code> (parse), <code>quote</code> (generate)</td></tr>
+        </table>
+<pre><span class="c">// A declarative macro — HashMap literal</span>
+<span class="kw">macro_rules!</span> hashmap {
+    ( $( $key:expr => $val:expr ),* $(,)? ) => {{
+        <span class="k">let</span> <span class="k">mut</span> <span class="v">m</span> = <span class="t">std::collections::HashMap</span>::<span class="n">new</span>();
+        $( <span class="v">m</span>.<span class="n">insert</span>($key, $val); )*
+        <span class="v">m</span>
+    }};
+}
+<span class="c">// Usage:</span>
+<span class="k">let</span> <span class="v">scores</span> = <span class="n">hashmap!</span> { <span class="s">"Alice"</span> => <span class="num">95</span>, <span class="s">"Bob"</span> => <span class="num">87</span> };</pre>
+
+<pre><span class="c">// A proc-macro derive crate (separate crate, proc-macro = true in Cargo.toml)</span>
+<span class="k">use</span> proc_macro::TokenStream;
+<span class="k">use</span> quote::quote;
+<span class="k">use</span> syn::{parse_macro_input, DeriveInput};
+
+<span class="kw">#[proc_macro_derive(HelloMacro)]</span>
+<span class="k">pub fn</span> <span class="n">hello_macro_derive</span>(<span class="v">input</span>: <span class="t">TokenStream</span>) -> <span class="t">TokenStream</span> {
+    <span class="k">let</span> <span class="v">ast</span> = <span class="n">parse_macro_input!</span>(<span class="v">input</span> <span class="k">as</span> <span class="t">DeriveInput</span>);
+    <span class="k">let</span> <span class="v">name</span> = &<span class="v">ast</span>.<span class="v">ident</span>;
+    <span class="n">quote!</span> {
+        <span class="kw">impl</span> <span class="t">HelloMacro</span> <span class="k">for</span> #<span class="v">name</span> {
+            <span class="k">fn</span> <span class="n">hello</span>() { <span class="n">println!</span>(<span class="s">"Hello from {}!"</span>, stringify!(#<span class="v">name</span>)); }
+        }
+    }.<span class="n">into</span>()
+}</pre>
+
+        <div class="res-row">
+          <a class="res-link" href="https://wasmtime.dev" target="_blank">wasmtime.dev</a>
+          <a class="res-link" href="https://component-model.bytecodealliance.org" target="_blank">Component Model docs</a>
+          <a class="res-link" href="https://veykril.github.io/tlborm/" target="_blank">The Little Book of Rust Macros</a>
+          <a class="res-link" href="https://docs.rs/syn/latest/syn/" target="_blank">docs.rs/syn</a>
+          <a class="res-link" href="https://docs.rs/quote/latest/quote/" target="_blank">docs.rs/quote</a>
+          <a class="res-link" href="https://www.youtube.com/watch?v=geovSK3wMB8" target="_blank">Crust of Rust: Proc Macros (YouTube)</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WEEK 8 ── -->
+    <div class="lesson" id="w8">
+      <div class="lesson-header">
+        <div class="lesson-week-badge" style="background:rgba(210,98,46,.12);color:var(--rust);border:1px solid rgba(210,98,46,.28);">WK 8</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Advanced Rust, Performance & Capstone</div>
+          <div class="lesson-subtitle">unsafe · FFI · profiling · ship it</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="sh" id="w8-unsafe">unsafe Rust — the five superpowers</div>
+        <p>The common misconception: <code>unsafe</code> turns off the borrow checker. It doesn't. What <code>unsafe</code> does is grant five specific abilities that the compiler cannot verify, while holding <em>you</em> responsible for upholding the invariants. The borrow checker still runs inside unsafe blocks — it just additionally permits these five things:</p>
+        <ul>
+          <li><strong>Dereference raw pointers</strong> (<code>*const T</code>, <code>*mut T</code>) — could be dangling or misaligned</li>
+          <li><strong>Call unsafe functions</strong> — functions that require invariants the caller must guarantee</li>
+          <li><strong>Implement unsafe traits</strong> — <code>Send</code>, <code>Sync</code> (the compiler can't prove thread safety automatically)</li>
+          <li><strong>Mutate statics</strong> — mutable global state, inherently racy if not synchronised</li>
+          <li><strong>Access fields of unions</strong> — only one field is valid at a time; the compiler can't know which</li>
+        </ul>
+<pre><span class="c">// Example: split_at_mut — requires unsafe because two &mut slices to the same buffer</span>
+<span class="k">fn</span> <span class="n">split_at_mut</span>(<span class="v">slice</span>: &<span class="k">mut</span> [<span class="t">i32</span>], <span class="v">mid</span>: <span class="t">usize</span>) -> (&<span class="k">mut</span> [<span class="t">i32</span>], &<span class="k">mut</span> [<span class="t">i32</span>]) {
+    <span class="k">let</span> <span class="v">ptr</span> = <span class="v">slice</span>.<span class="n">as_mut_ptr</span>();
+    <span class="c">// SAFETY: mid <= slice.len(), and the two slices are non-overlapping</span>
+    <span class="k">unsafe</span> {
+        (
+            std::slice::<span class="n">from_raw_parts_mut</span>(<span class="v">ptr</span>, <span class="v">mid</span>),
+            std::slice::<span class="n">from_raw_parts_mut</span>(<span class="v">ptr</span>.<span class="n">add</span>(<span class="v">mid</span>), <span class="v">slice</span>.<span class="n">len</span>() - <span class="v">mid</span>),
+        )
+    }
+}</pre>
+        <div class="callout warning">
+          <span class="callout-icon">⚠</span>
+          <div class="callout-body"><p><strong>Always document your safety invariant</strong> with a <code>// SAFETY: ...</code> comment above every <code>unsafe</code> block. Explain why the operations are valid given the context. This is not style — it's the professional contract between the unsafe code author and future maintainers.</p></div>
+        </div>
+
+        <div class="sh">FFI — Foreign Function Interface</div>
+        <p>FFI lets Rust interoperate with C (the lingua franca of native code) and Python (via PyO3). Everything across the FFI boundary is unsafe because Rust can't verify the calling conventions, lifetimes, or invariants of external code.</p>
+<pre><span class="c">// Calling C from Rust</span>
+<span class="kw">extern</span> <span class="s">"C"</span> {
+    <span class="k">fn</span> <span class="n">abs</span>(<span class="v">x</span>: <span class="t">i32</span>) -> <span class="t">i32</span>;  <span class="c">// declaration of a C function</span>
+}
+<span class="k">fn</span> <span class="n">main</span>() {
+    <span class="k">unsafe</span> { <span class="n">println!</span>(<span class="s">"{}"</span>, <span class="n">abs</span>(-<span class="num">3</span>)); }  <span class="c">// unsafe because Rust can't verify C's behaviour</span>
+}
+
+<span class="c">// Exposing Rust to C (extern "C" now requires unsafe in 2024 edition)</span>
+<span class="kw">#[no_mangle]</span>  <span class="c">// don't mangle the symbol name — C needs to find it by exact name</span>
+<span class="k">pub unsafe extern</span> <span class="s">"C"</span> <span class="k">fn</span> <span class="n">rust_add</span>(<span class="v">a</span>: <span class="t">i32</span>, <span class="v">b</span>: <span class="t">i32</span>) -> <span class="t">i32</span> { <span class="v">a</span> + <span class="v">b</span> }
+
+<span class="c">// PyO3 — Rust extension modules for Python</span>
+<span class="c">// [lib] crate-type = ["cdylib"] in Cargo.toml, plus pyo3 = { version = "0.23", features = ["extension-module"] }</span>
+<span class="k">use</span> pyo3::prelude::*;
+<span class="kw">#[pyfunction]</span>
+<span class="k">fn</span> <span class="n">fast_sum</span>(<span class="v">data</span>: <span class="t">Vec</span>&lt;<span class="t">f64</span>&gt;) -> <span class="t">f64</span> { <span class="v">data</span>.<span class="n">iter</span>().<span class="n">sum</span>() }
+<span class="kw">#[pymodule]</span>
+<span class="k">fn</span> <span class="n">my_module</span>(<span class="v">m</span>: &<span class="t">Bound</span>&lt;<span class="t">PyModule</span>&gt;) -> <span class="t">PyResult</span>&lt;()&gt; { <span class="v">m</span>.<span class="n">add_function</span>(<span class="n">wrap_pyfunction!</span>(<span class="n">fast_sum</span>, <span class="v">m</span>)?)?; <span class="t">Ok</span>(()) }</pre>
+
+        <div class="sh" id="w8-perf">Performance — making Rust fast</div>
+        <p>Rust code is already fast by default. The main things that slow it down are unnecessary allocations and clones. The performance principles in order of impact:</p>
+        <ul>
+          <li><strong>Use <code>&str</code> over <code>String</code> and <code>&[T]</code> over <code>Vec&lt;T&gt;</code> in function parameters</strong> — avoid a clone just to call a function</li>
+          <li><strong>Prefer iterators over manual loops</strong> — the compiler can vectorise and optimise iterator chains better</li>
+          <li><strong>Release builds</strong> — <code>cargo build --release</code> can be 10–100× faster than debug. Never benchmark debug builds.</li>
+          <li><strong>Profile before optimising</strong> — <code>cargo flamegraph</code> shows you where time is actually spent</li>
+          <li><strong>Criterion for benchmarks</strong> — statistically rigorous, measures wall time with warmup</li>
+        </ul>
+<pre><span class="c">// criterion benchmark (in benches/my_bench.rs)</span>
+<span class="k">use</span> criterion::{criterion_group, criterion_main, Criterion};
+
+<span class="k">fn</span> <span class="n">bench_hashmap</span>(<span class="v">c</span>: &<span class="k">mut</span> <span class="t">Criterion</span>) {
+    <span class="v">c</span>.<span class="n">bench_function</span>(<span class="s">"1M inserts"</span>, |<span class="v">b</span>| {
+        <span class="v">b</span>.<span class="n">iter</span>(|| {
+            <span class="k">let</span> <span class="k">mut</span> <span class="v">m</span> = <span class="t">MyHashMap</span>::<span class="n">new</span>();
+            <span class="k">for</span> <span class="v">i</span> <span class="k">in</span> <span class="num">0</span>..<span class="num">1_000_000</span> { <span class="v">m</span>.<span class="n">insert</span>(<span class="v">i</span>, <span class="v">i</span>); }
+        });
+    });
+}
+<span class="n">criterion_group!</span>(benches, bench_hashmap);
+<span class="n">criterion_main!</span>(benches);</pre>
+
+        <div class="sh">Capstone options & what to choose</div>
+        <p>The plan offers three capstone directions. Here's how to choose based on what signal you want to send:</p>
+        <div class="concept-row">
+          <div class="concept-card">
+            <div class="cc-title">Option A: Developer CLI</div>
+            <p>A fast file finder, log parser, or scaffolder — polished with clap, color, config file, published to crates.io. Signals: tooling engineering, polish, open-source contribution.</p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Option B: Networked WASM plugin host ★</div>
+            <p>axum backend + wasmtime running user-submitted .wasm plugins via WIT. Signals: backend, WASM, systems, everything from the plan in one piece. <strong>Strongest Airbnb/platform signal.</strong></p>
+          </div>
+          <div class="concept-card">
+            <div class="cc-title">Option C: Browser WASM app</div>
+            <p>Extend the image filter or build a WASM data visualisation/mini-game deployed live. Signals: WASM expertise, frontend/full-stack, real users.</p>
+          </div>
+        </div>
+
+        <div class="res-row">
+          <a class="res-link" href="https://doc.rust-lang.org/nomicon/" target="_blank">The Rustonomicon (unsafe internals)</a>
+          <a class="res-link" href="https://docs.rs/criterion/latest/criterion/" target="_blank">docs.rs/criterion</a>
+          <a class="res-link" href="https://pyo3.rs" target="_blank">pyo3.rs — Python extensions in Rust</a>
+          <a class="res-link" href="https://www.youtube.com/c/jonhoo" target="_blank">Jon Gjengset's Crust of Rust (YouTube channel)</a>
+          <a class="res-link" href="https://www.lurklurk.org/effective-rust/" target="_blank">Effective Rust (free online)</a>
+          <a class="res-link" href="https://github.com/BurntSushi/ripgrep" target="_blank">ripgrep source — real idiomatic Rust</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLOSING NOTES -->
+    <div class="lesson" style="border-color: var(--rust-deep);">
+      <div class="lesson-header" style="background: rgba(210,98,46,.06);">
+        <div class="lesson-week-badge" style="background:rgba(232,201,106,.1);color:var(--gold);border:1px solid rgba(232,201,106,.25);">REF</div>
+        <div class="lesson-meta">
+          <div class="lesson-title">Quick reference: things people get wrong</div>
+          <div class="lesson-subtitle">Common misconceptions and the corrections</div>
+        </div>
+      </div>
+      <div class="lesson-body">
+        <div class="interview-q">
+          <div class="iq-label">Common mistake</div>
+          <p>"I'll clone() to fix the borrow error" — correct in the short term, but overuse signals that you haven't internalised borrowing. Fix the lifetime instead.</p>
+        </div>
+        <div class="interview-q">
+          <div class="iq-label">Common mistake</div>
+          <p>Using <code>String</code> in function parameters instead of <code>&str</code>. Any function that just reads a string should take <code>&str</code> — the caller can pass either <code>&str</code> or <code>&String</code>.</p>
+        </div>
+        <div class="interview-q">
+          <div class="iq-label">Common mistake</div>
+          <p>Holding a <code>std::sync::Mutex</code> guard across an <code>.await</code>. This can deadlock the executor. Use <code>tokio::sync::Mutex</code> or drop the guard before the await.</p>
+        </div>
+        <div class="interview-q">
+          <div class="iq-label">Common mistake</div>
+          <p>Benchmarking in debug mode. <code>cargo bench</code> and flamegraph should always run against <code>--release</code>. Debug builds can be 10–100× slower and don't represent real performance.</p>
+        </div>
+        <div class="interview-q">
+          <div class="iq-label">Common mistake</div>
+          <p>Using <code>Rc</code> when you need thread-safety. <code>Rc</code> is single-threaded. If the type crosses thread boundaries (<code>spawn</code>), the compiler rejects it — use <code>Arc</code> instead.</p>
+        </div>
+        <div class="interview-q">
+          <div class="iq-label">Common mistake</div>
+          <p>Thinking <code>unsafe</code> disables the borrow checker. It doesn't — it only grants 5 specific additional capabilities. The borrow checker is still active; you just also gain the ability to dereference raw pointers etc.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
